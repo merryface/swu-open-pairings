@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWU Holonet Open</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1 class="site-title">SWU Holonet Open</h1>
+
+    <label class="input-label" for="players">Players (comma separated)</label>
+    <textarea id="players" class="players-input" rows="3" placeholder="Alice, Bob, Carol, Dave, Eve"></textarea>
+
+    <div class="controls">
+      <label class="input-label" for="group">Group</label>
+      <select id="group" class="group-select">
+        <option>Seed</option>
+        <option>1</option>
+        <option>2</option>
+        <option>3</option>
+      </select>
+
+      <label class="input-label" for="rounds">Rounds</label>
+      <select id="rounds" class="rounds-select">
+        <option>1</option>
+        <option>2</option>
+        <option selected>3</option>
+        <option>4</option>
+        <option>5</option>
+      </select>
+
+      <button id="generate" class="generate-btn">Generate Pairings</button>
+    </div>
+
+    <section id="results" class="results"></section>
+
+    <!-- Plain text output for copy/paste or posting -->
+    <pre id="plainOut" class="plain-output" aria-label="Plain pairings output" aria-live="polite"></pre>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
