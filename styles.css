@@ -25,6 +25,7 @@ body{
 }
 
 .container{
+  position:relative;
   max-width:980px;
   margin:0 auto;
   padding:28px;
@@ -132,4 +133,31 @@ body::after{
   background-size: 400px 400px, 200px 200px, 100px 100px;
   background-position: 0 0, 50px 80px, 130px 160px;
   opacity:0.45;pointer-events:none;mix-blend-mode:screen;
+}
+
+/* GitHub button in the top-right corner */
+.github-btn{
+  position:absolute;
+  top:18px;
+  right:28px;
+  z-index:1100;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  background: rgba(255,255,255,0.03);
+  color: #e6eef8;
+  border-radius:10px;
+  text-decoration:none;
+  border:1px solid rgba(255,255,255,0.04);
+  font-size:13px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+.github-btn svg{display:block;flex:0 0 auto;color:var(--muted)}
+.github-btn .github-text{color:var(--muted);white-space:nowrap}
+.github-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,0.7);border-color:rgba(255,255,255,0.06)}
+
+@media (max-width:480px){
+  .github-btn{padding:6px 8px;font-size:12px;top:12px;right:12px}
+  .github-btn .github-text{display:none}
 }
