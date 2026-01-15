@@ -102,19 +102,28 @@ function generatePairings(players, rounds) {
 // DOM wiring
 const playersEl = document.getElementById('players');
 const roundsEl = document.getElementById('rounds');
-const groupEl = document.getElementById('group');
 const generateBtn = document.getElementById('generate');
 const resultsEl = document.getElementById('results');
 
 // accessibility attributes
 playersEl.setAttribute('aria-label', 'Players, comma separated');
 roundsEl.setAttribute('aria-label', 'Number of rounds');
-groupEl.setAttribute('aria-label', 'Group selection');
 generateBtn.setAttribute('aria-controls', 'results');
 resultsEl.setAttribute('role', 'region');
 resultsEl.setAttribute('aria-live', 'polite');
 resultsEl.setAttribute('aria-label', 'Pairings results');
 resultsEl.setAttribute('tabindex', '-1');
+
+// Load saved player names from localStorage
+const savedPlayers = localStorage.getItem('swu-players');
+if (savedPlayers) {
+  playersEl.value = savedPlayers;
+}
+
+// Save player names to localStorage when they change
+playersEl.addEventListener('input', () => {
+  localStorage.setItem('swu-players', playersEl.value);
+});
 
 function ordinalSuffix(n) {
   const s = ["th", "st", "nd", "rd"], v = n % 100;
@@ -136,9 +145,8 @@ function render(pairings) {
 
   const heading = document.createElement('h2');
   heading.className = 'pairings-heading';
-  const groupLabel = (document.getElementById('group') && document.getElementById('group').value) || '';
-  // e.g. 'Seed Group Pairings Monday 3rd January 2026'
-  heading.textContent = `${groupLabel} Group Pairings ${formatDateHeading(new Date())}`;
+  // 'Pairings Monday 3rd January 2026'
+  heading.textContent = `Pairings ${formatDateHeading(new Date())}`;
   resultsEl.appendChild(heading);
 
   for (let idx = 0; idx < pairings.length; idx++) {
@@ -243,7 +251,8 @@ function hslToHex(h, s, l){
 
 generateBtn.addEventListener('click', () => {
   const raw = playersEl.value;
-  const players = raw.split(',').map(s => s.trim()).filter(Boolean);
+  // Split by both commas and line breaks
+  const players = raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
   const rounds = parseInt(roundsEl.value, 10) || 1;
 
   if (players.length === 0) {
@@ -280,6 +289,7 @@ generateBtn.addEventListener('click', () => {
 
   const pairings = generatePairings(players, rounds);
   render(pairings);
+  restoreWinnerSelections();
   // move focus to results for screen readers
   resultsEl.focus();
 });
@@ -305,6 +315,49 @@ resultsEl.addEventListener('click', (e) => {
     // Deselect all others in this match, then select this one
     playersInMatch.forEach(p => p.classList.remove('winner-selected'));
     target.classList.add('winner-selected');
+  }
+  
+  // Save winner selections to localStorage
+  saveWinnerSelections();
+});
+
+// Save current winner selections
+function saveWinnerSelections() {
+  const winners = [];
+  resultsEl.querySelectorAll('.player-name.winner-selected').forEach(el => {
+    winners.push({
+      matchId: el.getAttribute('data-match-id'),
+      player: el.getAttribute('data-player')
+    });
+  });
+  localStorage.setItem('swu-winners', JSON.stringify(winners));
+}
+
+// Restore winner selections after rendering
+function restoreWinnerSelections() {
+  const saved = localStorage.getItem('swu-winners');
+  if (!saved) return;
+  
+  try {
+    const winners = JSON.parse(saved);
+    winners.forEach(({ matchId, player }) => {
+      const el = resultsEl.querySelector(`.player-name[data-match-id="${matchId}"][data-player="${player}"]`);
+      if (el) el.classList.add('winner-selected');
+    });
+  } catch (e) {
+    console.error('Failed to restore winner selections:', e);
+  }
+}
+
+// Reset button handler
+const resetBtn = document.getElementById('reset');
+resetBtn.addEventListener('click', () => {
+  if (confirm('Clear all saved data (player names and winner selections)?')) {
+    localStorage.removeItem('swu-players');
+    localStorage.removeItem('swu-winners');
+    playersEl.value = '';
+    resultsEl.innerHTML = '';
+    document.getElementById('plainOut').innerHTML = '';
   }
 });
 
