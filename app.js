@@ -161,6 +161,8 @@ function render(pairings) {
       const li = document.createElement('li');
       li.className = 'match-item';
       li.setAttribute('role', 'listitem');
+      // unique match identifier for this pairing
+      const matchId = `r${r.round}-m${r.matches.indexOf(m)}`;
       if (m.bye) {
         li.classList.add('bye');
         const who = m.player1 === null ? m.player2 : m.player1;
@@ -168,6 +170,8 @@ function render(pairings) {
         span.className = 'player-name';
         span.textContent = who;
         span.setAttribute('data-player', who);
+        span.setAttribute('data-match-id', matchId);
+        span.style.cursor = 'pointer';
         li.appendChild(span);
         li.appendChild(document.createTextNode(': BYE'));
       } else {
@@ -175,11 +179,15 @@ function render(pairings) {
         span1.className = 'player-name';
         span1.textContent = m.player1;
         span1.setAttribute('data-player', m.player1);
+        span1.setAttribute('data-match-id', matchId);
+        span1.style.cursor = 'pointer';
 
         const span2 = document.createElement('span');
         span2.className = 'player-name';
         span2.textContent = m.player2;
         span2.setAttribute('data-player', m.player2);
+        span2.setAttribute('data-match-id', matchId);
+        span2.style.cursor = 'pointer';
 
     li.appendChild(span1);
     li.appendChild(document.createTextNode('vs '));
@@ -274,6 +282,30 @@ generateBtn.addEventListener('click', () => {
   render(pairings);
   // move focus to results for screen readers
   resultsEl.focus();
+});
+
+// Handle winner selection clicks
+resultsEl.addEventListener('click', (e) => {
+  const target = e.target;
+  if (!target.classList.contains('player-name')) return;
+  
+  const matchId = target.getAttribute('data-match-id');
+  if (!matchId) return;
+  
+  // Find all players in this match
+  const playersInMatch = resultsEl.querySelectorAll(`.player-name[data-match-id="${matchId}"]`);
+  
+  // Check if this player is already selected
+  const isSelected = target.classList.contains('winner-selected');
+  
+  if (isSelected) {
+    // Toggle off
+    target.classList.remove('winner-selected');
+  } else {
+    // Deselect all others in this match, then select this one
+    playersInMatch.forEach(p => p.classList.remove('winner-selected'));
+    target.classList.add('winner-selected');
+  }
 });
 
 // Export function for possible programmatic use

@@ -80,7 +80,7 @@ body{
 .round-title{margin:18px 0 8px 0;color:#fff;font-size:16px}
 .matches-list{list-style:disc inside;padding-left:18px;margin:0 0 12px 0}
 .match-item{
-  padding:10px 12px;
+  padding:21px 12px;
   border-bottom:1px solid rgba(220,220,220,0.06); /* thin light grey line */
   background: transparent;
   color:#e6eef8;
@@ -160,4 +160,33 @@ body::after{
 @media (max-width:480px){
   .github-btn{padding:6px 8px;font-size:12px;top:12px;right:12px}
   .github-btn .github-text{display:none}
+}
+
+/* Winner selection styling */
+.player-name.winner-selected{
+  position:relative;
+  display:inline-block;
+  padding:8px 14px 8px 14px;
+  margin:-8px 6px -8px 6px;
+  border:2px solid var(--accent);
+  border-radius:8px;
+  background:rgba(255,232,31,0.04);
+  box-shadow:0 4px 16px rgba(255,232,31,0.15);
+}
+
+/* Winner label at top center - interrupts the border */
+.player-name.winner-selected::before{
+  content:'winner';
+  position:absolute;
+  top:-10px;
+  left:50%;
+  transform:translateX(-50%);
+  background:var(--bg);
+  color:var(--accent);
+  padding:0 8px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  white-space:nowrap;
 }
