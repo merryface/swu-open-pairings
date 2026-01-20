@@ -120,9 +120,20 @@ if (savedPlayers) {
   playersEl.value = savedPlayers;
 }
 
+// Load saved rounds from localStorage
+const savedRounds = localStorage.getItem('swu-rounds');
+if (savedRounds) {
+  roundsEl.value = savedRounds;
+}
+
 // Save player names to localStorage when they change
 playersEl.addEventListener('input', () => {
   localStorage.setItem('swu-players', playersEl.value);
+});
+
+// Save rounds to localStorage when they change
+roundsEl.addEventListener('input', () => {
+  localStorage.setItem('swu-rounds', roundsEl.value);
 });
 
 function ordinalSuffix(n) {
@@ -288,6 +299,10 @@ generateBtn.addEventListener('click', () => {
   styleEl.textContent = rules;
 
   const pairings = generatePairings(players, rounds);
+  
+  // Save pairings to localStorage
+  savePairings(pairings);
+  
   render(pairings);
   restoreWinnerSelections();
   // move focus to results for screen readers
@@ -321,6 +336,24 @@ resultsEl.addEventListener('click', (e) => {
   saveWinnerSelections();
 });
 
+// Save pairings to localStorage
+function savePairings(pairings) {
+  localStorage.setItem('swu-pairings', JSON.stringify(pairings));
+}
+
+// Restore pairings from localStorage
+function restorePairings() {
+  const saved = localStorage.getItem('swu-pairings');
+  if (!saved) return null;
+  
+  try {
+    return JSON.parse(saved);
+  } catch (e) {
+    console.error('Failed to restore pairings:', e);
+    return null;
+  }
+}
+
 // Save current winner selections
 function saveWinnerSelections() {
   const winners = [];
@@ -352,12 +385,53 @@ function restoreWinnerSelections() {
 // Reset button handler
 const resetBtn = document.getElementById('reset');
 resetBtn.addEventListener('click', () => {
-  if (confirm('Clear all saved data (player names and winner selections)?')) {
+  if (confirm('Clear all saved data (player names, rounds, pairings, and winner selections)?')) {
     localStorage.removeItem('swu-players');
+    localStorage.removeItem('swu-rounds');
+    localStorage.removeItem('swu-pairings');
     localStorage.removeItem('swu-winners');
     playersEl.value = '';
+    roundsEl.value = '1';
     resultsEl.innerHTML = '';
     document.getElementById('plainOut').innerHTML = '';
+  }
+});
+
+// Load and display saved pairings on page load
+window.addEventListener('DOMContentLoaded', () => {
+  const savedPairings = restorePairings();
+  if (savedPairings && savedPairings.length > 0) {
+    // Get saved player names to restore colors
+    const raw = playersEl.value;
+    const players = raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+    
+    if (players.length > 0) {
+      // Recreate player colors
+      const nameColors = {};
+      const n = players.length;
+      for (let i = 0; i < n; i++){
+        const hue = Math.round(((i * 360) / n + 40) % 360);
+        const sat = 78;
+        const light = 56;
+        nameColors[players[i]] = hslToHex(hue, sat, light);
+      }
+      
+      const styleId = 'player-colors';
+      let styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+      }
+      const rules = Object.entries(nameColors).map(([name, hex]) => {
+        const esc = name.replace(/"/g, '\\"');
+        return `.player-name[data-player="${esc}"]{ color: ${hex}; }`;
+      }).join('\n');
+      styleEl.textContent = rules;
+    }
+    
+    render(savedPairings);
+    restoreWinnerSelections();
   }
 });
 
