@@ -225,6 +225,21 @@ function render(pairings) {
   plainLines.push('The pairings for this week! Try and play as many of these as you can/want. Don\'t worry about getting all of them done (but try to play at least ONE 😅)');
   plainLines.push('<br>');
   
+  // Add rounds and matchups
+  for (const r of pairings) {
+    plainLines.push(`Round ${r.round}`);
+    for (const m of r.matches) {
+      if (m.bye) {
+        const who = m.player1 === null ? m.player2 : m.player1;
+        plainLines.push(`${who}: BYE`);
+      } else {
+        plainLines.push(`${m.player1} vs ${m.player2}`);
+      }
+    }
+    plainLines.push('-----');
+  }
+  plainLines.push('<br>');
+  
   // Calculate next Saturday at 20:00 UTC
   const now = new Date();
   const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
