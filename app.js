@@ -208,9 +208,9 @@ function render(pairings) {
         span2.setAttribute('data-match-id', matchId);
         span2.style.cursor = 'pointer';
 
-    li.appendChild(span1);
-    li.appendChild(document.createTextNode('vs '));
-    li.appendChild(span2);
+        li.appendChild(span1);
+        li.appendChild(document.createTextNode('vs '));
+        li.appendChild(span2);
       }
       ul.appendChild(li);
     }
@@ -220,18 +220,36 @@ function render(pairings) {
 
   // build plain text output
   const plainLines = [];
+  
+  // Add header message with corrected grammar
+  plainLines.push('The pairings for this week! Try and play as many of these as you can/want. Don\'t worry about getting all of them done (but try to play at least ONE 😅)');
+  plainLines.push('<br>');
+  
+  // Calculate next Saturday at 20:00 UTC
+  const now = new Date();
+  const daysUntilSaturday = (6 - now.getDay() + 7) % 7;
+  const nextSaturday = new Date(now);
+  nextSaturday.setDate(now.getDate() + (daysUntilSaturday === 0 ? 7 : daysUntilSaturday));
+  
+  // Format deadline with ordinal suffix
+  const day = nextSaturday.getDate();
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const month = months[nextSaturday.getMonth()];
+  plainLines.push(`***DEADLINE: Saturday ${day}${ordinalSuffix(day)} ${month} 20:00 UTC***`);
+  plainLines.push('<br>');
+  
+  // Collect all unique players
+  const allPlayers = new Set();
   for (const r of pairings) {
-    plainLines.push(`Round ${r.round}`);
     for (const m of r.matches) {
-      if (m.bye) {
-        const who = m.player1 === null ? m.player2 : m.player1;
-        plainLines.push(`@${who}: BYE`);
-      } else {
-        plainLines.push(`@${m.player1} vs @${m.player2}`);
-      }
+      if (m.player1 !== null) allPlayers.add(m.player1);
+      if (m.player2 !== null) allPlayers.add(m.player2);
     }
-    // add a clear plain-text separator between rounds
-    plainLines.push('-----');
+  }
+  
+  // Add player mentions
+  for (const player of Array.from(allPlayers).sort()) {
+    plainLines.push(`${player}`);
   }
   const plainOut = document.getElementById('plainOut');
   // construct HTML with minimal markup so names can be yellow
