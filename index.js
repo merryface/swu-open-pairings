@@ -85,6 +85,12 @@ function findRoundMatches(players, playedMap) {
   return fallback;
 }
 
+function hasRepeatMatch(matches, playedMap) {
+  return matches.some(({ player1, player2 }) => {
+    return player1 !== null && player2 !== null && playedMap.get(player1)?.has(player2);
+  });
+}
+
 /**
  * Generate randomized pairings for a number of rounds while avoiding repeat opponents as much as possible.
  *
@@ -99,6 +105,7 @@ function findRoundMatches(players, playedMap) {
 function generatePairings(players, rounds) {
   if (!Array.isArray(players)) throw new TypeError("players must be an array");
   if (!Number.isInteger(rounds) || rounds < 1) throw new TypeError("rounds must be a positive integer");
+  if (rounds > 10) throw new TypeError("rounds cannot exceed 10");
 
   // Initialize played map: player -> Set(opponents)
   const played = new Map();
@@ -109,13 +116,20 @@ function generatePairings(players, rounds) {
   const result = [];
 
   for (let r = 0; r < rounds; r++) {
-    // Shuffle players each round to randomize ordering
-    const pool = shuffle(players.slice());
+    let matches;
+    const maxAttempts = 10;
+    let attempt = 0;
 
-    // If odd, add a null representing a bye
-    if (pool.length % 2 === 1) pool.push(null);
+    do {
+      const pool = shuffle(players.slice());
+      if (pool.length % 2 === 1) pool.push(null);
+      matches = findRoundMatches(pool, played);
+      attempt += 1;
+    } while (attempt < maxAttempts && hasRepeatMatch(matches, played));
 
-    const matches = findRoundMatches(pool, played);
+    if (hasRepeatMatch(matches, played)) {
+      console.warn(`Could not avoid repeat opponents after ${maxAttempts} attempts for round ${r + 1}. Using best available pairing.`);
+    }
 
     // Update played map for all non-bye matches
     for (const m of matches) {

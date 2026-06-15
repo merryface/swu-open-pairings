@@ -74,8 +74,14 @@ body{
   border:1px solid rgba(255,255,255,0.06);
   padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;
 }
-.reset-btn:hover{background:rgba(255,0,0,0.08);color:#ff6b6b;border-color:rgba(255,0,0,0.2);transform:translateY(-1px)}
-
+.reset-btn:hover{background:rgba(255,0,0,0.08);color:#ff6b6b;border-color:rgba(255,0,0,0.2);transform:translateY(-1px)}.export-btn{
+  background:linear-gradient(180deg, rgba(127,255,212,0.12), rgba(127,255,212,0.06));
+  color:var(--accent-2);
+  border:1px solid rgba(127,255,212,0.18);
+  padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;
+}
+.export-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(127,255,212,0.06)}
+.export-btn:disabled{opacity:0.45;cursor:not-allowed;box-shadow:none}
 .results{margin-top:20px}
 .pairings-heading{
   margin:0 0 10px 0;
