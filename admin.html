@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - SWU Holonet Open</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container admin-container">
+    <div class="admin-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <h1>Admin Panel</h1>
+        <span id="auth-status" style="font-size: 0.85em; color: var(--muted);">logged on</span>
+      </div>
+      <button id="auth-action" class="reset-btn"></button>
+    </div>
+    <div id="admin-content">
+      <p>Admin functionality will be available here once the backend is connected.</p>
+    </div>
+  </main>
+
+  <script src="src/auth.js"></script>
+  <script>
+    window.SWU.Auth.initAuthUI();
+    window.SWU.Auth.requireAuth();
+  </script>
+</body>
+</html>

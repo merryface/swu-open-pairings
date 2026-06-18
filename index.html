@@ -20,7 +20,10 @@
         <span class="github-text">merryface/swu-open-pairings</span>
       </a>
     </div>
-    <h1 class="site-title">SWU Holonet Open</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h1 class="site-title">SWU Holonet Open</h1>
+      <span id="auth-status" style="font-size: 0.85em; color: var(--muted);"></span>
+    </div>
 
     <label class="input-label" for="players">Players (comma separated)</label>
     <textarea id="players" class="players-input" rows="3" placeholder="Alice, Bob, Carol, Dave, Eve"></textarea>
@@ -75,8 +78,17 @@
     <pre id="plainOut" class="plain-output" aria-label="Plain pairings output" aria-live="polite"></pre>
   </main>
 
+  <script src="src/auth.js" defer></script>
   <script src="src/pairings.js" defer></script>
   <script src="src/ui.js" defer></script>
   <script src="app.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const statusEl = document.getElementById('auth-status');
+      if (statusEl && window.SWU && window.SWU.Auth) {
+        statusEl.textContent = window.SWU.Auth.isAuthenticated() ? 'logged on' : 'logged off';
+      }
+    });
+  </script>
 </body>
 </html>

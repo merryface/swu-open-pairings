@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - SWU Holonet Open</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container auth-container">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h1>Register</h1>
+      <span id="auth-status" style="font-size: 0.85em; color: var(--muted);">logged off</span>
+    </div>
+    <form id="register-form" class="auth-form">
+      <label for="username">Username</label>
+      <input id="username" type="text" required />
+
+      <label for="password">Password</label>
+      <input id="password" type="password" required minlength="8" />
+
+      <button type="submit" class="generate-btn">Register</button>
+      <p id="register-error" class="error-message" hidden></p>
+      <p class="auth-note">Already have an account? <a href="login.html">Login</a></p>
+    </form>
+  </main>
+
+  <script src="src/auth.js"></script>
+  <script>
+    console.log('[RegisterPage] Inline script started');
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[RegisterPage] DOMContentLoaded');
+      
+      try {
+        // Redirect if already authenticated
+        if (window.SWU?.Auth?.isAuthenticated?.()) {
+          console.log('[RegisterPage] Already authenticated, redirecting');
+          window.location.href = 'index.html';
+          return;
+        }
+
+        const form = document.getElementById('register-form');
+        const errorEl = document.getElementById('register-error');
+        
+        if (!form) {
+          console.error('[RegisterPage] Form not found');
+          return;
+        }
+
+        console.log('[RegisterPage] Setting up form handler');
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          console.log('[RegisterPage] Form submitted');
+          
+          try {
+            errorEl.hidden = true;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+              throw new Error('Username and password required');
+            }
+
+            if (password.length < 8) {
+              throw new Error('Password must be at least 8 characters');
+            }
+
+            console.log('[RegisterPage] Calling authFetch', { username });
+            const response = await window.SWU.Auth.authFetch('/api/auth/register', {
+              method: 'POST',
+              body: JSON.stringify({ username, password }),
+            });
+
+            const data = await response.json();
+            console.log('[RegisterPage] Response received', { status: response.status });
+            
+            if (!response.ok) {
+              throw new Error(data.message || 'Registration failed');
+            }
+
+            console.log('[RegisterPage] Registration successful, redirecting to login');
+            window.location.href = 'login.html';
+          } catch (err) {
+            console.error('[RegisterPage] Error:', err.message);
+            errorEl.textContent = err.message;
+            errorEl.hidden = false;
+          }
+        });
+        console.log('[RegisterPage] Form handler attached');
+      } catch (err) {
+        console.error('[RegisterPage] Fatal error:', err);
+      }
+    });
+  </script>
+</body>
+</html>
