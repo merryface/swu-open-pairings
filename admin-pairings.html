@@ -11,7 +11,7 @@
     <!-- Header with navigation is injected by src/components.js -->
     <div style="display: flex; align-items: center; gap: 12px;">
       <h1 class="site-title">Create New Pairings</h1>
-      <span id="auth-status" style="font-size: 0.85em; color: var(--muted);"></span>
+
     </div>
 
     <button id="save-top" class="generate-btn" style="width: 100%; padding: 12px; margin-bottom: 20px;">Save Pairings</button>
@@ -86,18 +86,7 @@
   <script src="app.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const statusEl = document.getElementById('auth-status');
-      const logoutBtn = document.getElementById('logout-btn');
-      if (statusEl && window.SWU && window.SWU.Auth) {
-        const isAuthenticated = window.SWU.Auth.isAuthenticated();
-        statusEl.textContent = isAuthenticated ? 'logged on' : 'logged off';
-        if (logoutBtn) {
-          logoutBtn.hidden = !isAuthenticated;
-          logoutBtn.addEventListener('click', () => {
-            window.SWU.Auth.logout();
-          });
-        }
-      }
+      window.SWU?.Components?.injectHeader();
 
       // Set default title
       const titleInput = document.getElementById('pairing-title');

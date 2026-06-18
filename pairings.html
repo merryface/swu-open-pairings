@@ -11,11 +11,10 @@
     <!-- Header with navigation is injected by src/components.js -->
     <div style="display: flex; align-items: center; gap: 12px;">
       <h1 class="site-title" id="pairing-title">Loading...</h1>
-      <span id="auth-status" style="font-size: 0.85em; color: var(--muted);"></span>
     </div>
 
     <!-- Admin actions (Update, Delete buttons) -->
-    <div id="admin-actions" style="display: flex; gap: 12px; margin-bottom: 28px;" hidden>
+    <div id="admin-actions" style="display: none; gap: 12px; margin-bottom: 28px;">
       <button id="update-btn" class="generate-btn">Update</button>
       <button id="delete-btn" class="reset-btn">Delete</button>
     </div>
@@ -36,7 +35,7 @@
     <pre id="plainOut" class="plain-output" aria-label="Plain pairings output" aria-live="polite"></pre>
 
     <!-- Admin buttons at bottom -->
-    <div id="admin-actions-bottom" style="display: flex; gap: 12px; margin-top: 28px;" hidden>
+    <div id="admin-actions-bottom" style="display: none; gap: 12px; margin-top: 28px;">
       <button id="update-btn-bottom" class="generate-btn">Update</button>
       <button id="delete-btn-bottom" class="reset-btn">Delete</button>
     </div>
@@ -48,6 +47,17 @@
   <script src="src/pairings-components.js" defer></script>
   <script src="src/nav.js" defer></script>
   <script src="src/display.js" defer></script>
+  <script src="src/pairings-display.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        window.SWU.Components.injectHeader();
+        window.SWU.PairingsDisplay.init();
+      } catch (error) {
+        console.error('Initialization error:', error);
+      }
+    });
+  </script>
   <script src="src/ui.js" defer></script>
   <script src="src/pairings-display.js" defer></script>
   <script>

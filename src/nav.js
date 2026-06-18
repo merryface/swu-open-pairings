@@ -45,6 +45,16 @@
         }
       });
 
+      // Setup logout button
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          if (window.SWU?.Auth?.logout) {
+            window.SWU.Auth.logout();
+          }
+        });
+      }
+
       // Update menu visibility based on auth status
       this.updateMenuItems();
     },
@@ -70,6 +80,12 @@
       loggedOffItems.forEach(item => {
         item.hidden = isAuthenticated;
       });
+
+      // Update logout button visibility
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.hidden = !isAuthenticated;
+      }
     },
 
     // Call this when auth state changes

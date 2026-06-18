@@ -62,9 +62,14 @@
   </div>
 
   <script src="src/auth.js"></script>
+  <script src="src/components.js" defer></script>
+  <script src="src/nav.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       try {
+        // Inject header with navigation
+        window.SWU?.Components?.injectHeader();
+
         // Check authentication
         if (!window.SWU?.Auth?.isAuthenticated?.()) {
           window.location.href = 'login.html';

@@ -49,7 +49,7 @@ const extractPlayers = (rounds) => {
   return players;
 };
 
-const buildMatchHTML = (match, playerColors, isAdmin = false, roundIdx = 0) => {
+const buildMatchHTML = (match, playerColors, isAdmin = false, roundIdx = 0, matchIdx = 0) => {
   const home = (match.home || match.player1 || '').replace(/:\s*$/, '').trim();
   const away = (match.away || match.player2 || '').replace(/:\s*$/, '').trim();
   const isBye = match.bye === true;
@@ -59,7 +59,7 @@ const buildMatchHTML = (match, playerColors, isAdmin = false, roundIdx = 0) => {
 
   // Status indicator
   if (isAdmin) {
-    html += `<input type="checkbox" class="match-played-checkbox" ${isPlayed ? 'checked' : ''} data-match-id="${match.id || ''}" data-round-idx="${roundIdx}" />`;
+    html += `<input type="checkbox" class="match-played-checkbox" ${isPlayed ? 'checked' : ''} data-match-idx="${matchIdx}" data-round-idx="${roundIdx}" />`;
   } else {
     if (isPlayed) {
       html += `<span style="color: var(--accent); font-weight: 700; margin-right: 10px;">✓</span>`;
@@ -100,7 +100,7 @@ const renderRounds = (rounds, playerColors, isAdmin = false) => {
         console.warn('[Display] BYE match with no player:', { match, home, roundIdx, idx });
       }
 
-      html += buildMatchHTML(match, playerColors, isAdmin, roundIdx);
+      html += buildMatchHTML(match, playerColors, isAdmin, roundIdx, idx);
 
       if (isBye) {
         plainText += `${home}: BYE\n`;

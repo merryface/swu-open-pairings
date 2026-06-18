@@ -13,11 +13,8 @@
     async init() {
       console.log('[PairingsDisplay] Initializing');
       
-      // Update auth status
-      const statusEl = document.getElementById('auth-status');
-      if (statusEl && window.SWU?.Auth) {
-        statusEl.textContent = window.SWU.Auth.isAuthenticated() ? 'logged on' : 'logged off';
-      }
+      // Hide admin actions if not authenticated
+      this.updateAdminActionsVisibility();
 
       // Get pairing ID from URL query params
       const urlParams = new URLSearchParams(window.location.search);
@@ -31,6 +28,21 @@
       this.currentPairingId = pairingId;
       await this.loadPairing(pairingId);
       this.setupAdminButtons();
+      // Ensure visibility is set correctly for admin actions
+      this.updateAdminActionsVisibility();
+    },
+
+    updateAdminActionsVisibility() {
+      const adminActions = document.getElementById('admin-actions');
+      const adminActionsBottom = document.getElementById('admin-actions-bottom');
+      const isAuth = window.SWU?.Auth?.isAuthenticated?.();
+      
+      if (adminActions) {
+        adminActions.style.display = isAuth ? 'flex' : 'none';
+      }
+      if (adminActionsBottom) {
+        adminActionsBottom.style.display = isAuth ? 'flex' : 'none';
+      }
     },
 
     setupAdminButtons() {
@@ -92,15 +104,7 @@
         titleEl.textContent = pairing.name || 'Untitled Pairing';
 
         // Show/hide admin actions
-        const adminActions = document.getElementById('admin-actions');
-        if (adminActions && window.SWU?.Auth) {
-          adminActions.hidden = !window.SWU.Auth.isAuthenticated();
-        }
-
-        const adminActionsBottom = document.getElementById('admin-actions-bottom');
-        if (adminActionsBottom && window.SWU?.Auth) {
-          adminActionsBottom.hidden = !window.SWU.Auth.isAuthenticated();
-        }
+        this.updateAdminActionsVisibility();
 
         // Display pairings
         this.displayPairings(pairing);
@@ -203,24 +207,25 @@
       const checkboxes = document.querySelectorAll('.match-played-checkbox');
       checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', (e) => {
-          const matchId = e.target.getAttribute('data-match-id');
-          const roundIdx = e.target.getAttribute('data-round-idx');
+          const matchIdx = parseInt(e.target.getAttribute('data-match-idx'));
+          const roundIdx = parseInt(e.target.getAttribute('data-round-idx'));
           
-        console.log('[PairingsDisplay] Match toggled:', { matchId, roundIdx, checked: e.target.checked });
+          console.log('[PairingsDisplay] Match toggled:', { matchIdx, roundIdx, checked: e.target.checked });
           
           // Track changes
-          if (matchId) {
+          if (matchIdx >= 0) {
+            const matchKey = `${roundIdx}-${matchIdx}`;
             if (e.target.checked) {
-              this.changedMatches.add(matchId);
+              this.changedMatches.add(matchKey);
             } else {
-              this.changedMatches.delete(matchId);
+              this.changedMatches.delete(matchKey);
             }
           }
 
           // Update the match data
           if (this.currentPairingData?.rounds?.[roundIdx]) {
             const round = this.currentPairingData.rounds[roundIdx];
-            const match = round.matches?.find(m => m.id === matchId);
+            const match = round.matches?.[matchIdx];
             if (match) {
               match.played = e.target.checked;
               // Also clean up the player names if they have colons

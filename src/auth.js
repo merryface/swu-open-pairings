@@ -110,7 +110,7 @@ const navigateTo = (path) => {
 
 const logout = () => {
   clearAuthToken();
-  navigateTo('login.html');
+  navigateTo('');
 };
 
 const requireAuth = () => {
@@ -144,15 +144,11 @@ const updateAuthButton = () => {
 };
 
 const updateAuthStatus = () => {
-  const statusEl = document.getElementById('auth-status');
-  if (statusEl) {
-    statusEl.textContent = isAuthenticated() ? 'logged on' : 'logged off';
-  }
+  // Auth status display removed
 };
 
 const initAuthUI = () => {
   updateAuthButton();
-  updateAuthStatus();
 };
 
 // Test utilities (for testing only)

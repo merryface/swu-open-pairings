@@ -75,18 +75,8 @@
   <script src="app.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const statusEl = document.getElementById('auth-status');
-      const logoutBtn = document.getElementById('logout-btn');
-      if (statusEl && window.SWU && window.SWU.Auth) {
-        const isAuthenticated = window.SWU.Auth.isAuthenticated();
-        statusEl.textContent = isAuthenticated ? 'logged on' : 'logged off';
-        if (logoutBtn) {
-          logoutBtn.hidden = !isAuthenticated;
-          logoutBtn.addEventListener('click', () => {
-            window.SWU.Auth.logout();
-          });
-        }
-      }
+      // Inject header with navigation
+      window.SWU?.Components?.injectHeader();
 
       // Add Manual Pairings button to menu for generator.html
       const menuPanel = document.getElementById('menu-panel');
