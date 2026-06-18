@@ -40,12 +40,21 @@
       <button id="export" class="export-btn" disabled>Export Image</button>
     </div>
 
+    <div class="filter-row">
+      <label class="input-label" for="player-filter">Filter pairings</label>
+      <select id="player-filter" class="player-filter-select" disabled>
+        <option value="all">All players</option>
+      </select>
+    </div>
+
     <section id="results" class="results"></section>
 
     <!-- Plain text output for copy/paste or posting -->
     <pre id="plainOut" class="plain-output" aria-label="Plain pairings output" aria-live="polite"></pre>
   </main>
 
+  <script src="src/pairings.js" defer></script>
+  <script src="src/ui.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>
