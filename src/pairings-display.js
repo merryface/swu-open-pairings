@@ -51,20 +51,29 @@
       const deleteBtn = document.getElementById('delete-btn');
       const deleteBtnBottom = document.getElementById('delete-btn-bottom');
 
+      // Remove existing listeners by cloning
       if (updateBtn) {
-        updateBtn.addEventListener('click', () => this.handleUpdate());
+        const newUpdateBtn = updateBtn.cloneNode(true);
+        updateBtn.replaceWith(newUpdateBtn);
+        newUpdateBtn.addEventListener('click', () => this.handleUpdate());
       }
 
       if (updateBtnBottom) {
-        updateBtnBottom.addEventListener('click', () => this.handleUpdate());
+        const newUpdateBtnBottom = updateBtnBottom.cloneNode(true);
+        updateBtnBottom.replaceWith(newUpdateBtnBottom);
+        newUpdateBtnBottom.addEventListener('click', () => this.handleUpdate());
       }
 
       if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => this.handleDelete());
+        const newDeleteBtn = deleteBtn.cloneNode(true);
+        deleteBtn.replaceWith(newDeleteBtn);
+        newDeleteBtn.addEventListener('click', () => this.handleDelete());
       }
 
       if (deleteBtnBottom) {
-        deleteBtnBottom.addEventListener('click', () => this.handleDelete());
+        const newDeleteBtnBottom = deleteBtnBottom.cloneNode(true);
+        deleteBtnBottom.replaceWith(newDeleteBtnBottom);
+        newDeleteBtnBottom.addEventListener('click', () => this.handleDelete());
       }
     },
 
