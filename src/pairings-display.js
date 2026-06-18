@@ -1,0 +1,388 @@
+/**
+ * Pairings display module
+ * Fetches and displays a specific pairing by ID
+ */
+
+(function() {
+  const PairingsDisplay = {
+    currentPairingId: null,
+    currentPairingData: null,
+    currentPlayerFilter: 'all',
+    changedMatches: new Set(),
+
+    async init() {
+      console.log('[PairingsDisplay] Initializing');
+      
+      // Update auth status
+      const statusEl = document.getElementById('auth-status');
+      if (statusEl && window.SWU?.Auth) {
+        statusEl.textContent = window.SWU.Auth.isAuthenticated() ? 'logged on' : 'logged off';
+      }
+
+      // Get pairing ID from URL query params
+      const urlParams = new URLSearchParams(window.location.search);
+      const pairingId = urlParams.get('id');
+
+      if (!pairingId) {
+        this.showError('No pairing ID provided');
+        return;
+      }
+
+      this.currentPairingId = pairingId;
+      await this.loadPairing(pairingId);
+      this.setupAdminButtons();
+    },
+
+    setupAdminButtons() {
+      const updateBtn = document.getElementById('update-btn');
+      const updateBtnBottom = document.getElementById('update-btn-bottom');
+      const deleteBtn = document.getElementById('delete-btn');
+      const deleteBtnBottom = document.getElementById('delete-btn-bottom');
+
+      if (updateBtn) {
+        updateBtn.addEventListener('click', () => this.handleUpdate());
+      }
+
+      if (updateBtnBottom) {
+        updateBtnBottom.addEventListener('click', () => this.handleUpdate());
+      }
+
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => this.handleDelete());
+      }
+
+      if (deleteBtnBottom) {
+        deleteBtnBottom.addEventListener('click', () => this.handleDelete());
+      }
+    },
+
+    async loadPairing(pairingId) {
+      const titleEl = document.getElementById('pairing-title');
+      const resultsEl = document.getElementById('results');
+      
+      try {
+        const url = window.SWU?.Auth?.apiUrl(`/api/pairings/${pairingId}`) || `http://127.0.0.1:3000/api/pairings/${pairingId}`;
+        console.log('[PairingsDisplay] Fetching from:', url);
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch pairing: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const pairing = data.data || data;
+
+        if (!pairing) {
+          throw new Error('Pairing not found');
+        }
+
+        this.currentPairingData = pairing;
+        
+        // Clean up player names from old data (remove colons)
+        if (pairing.rounds) {
+          pairing.rounds.forEach(round => {
+            round.matches?.forEach(match => {
+              match.home = (match.home || '').replace(/:\s*$/, '').trim();
+              match.away = (match.away || '').replace(/:\s*$/, '').trim();
+            });
+          });
+        }
+        
+        // Display title
+        titleEl.textContent = pairing.name || 'Untitled Pairing';
+
+        // Show/hide admin actions
+        const adminActions = document.getElementById('admin-actions');
+        if (adminActions && window.SWU?.Auth) {
+          adminActions.hidden = !window.SWU.Auth.isAuthenticated();
+        }
+
+        const adminActionsBottom = document.getElementById('admin-actions-bottom');
+        if (adminActionsBottom && window.SWU?.Auth) {
+          adminActionsBottom.hidden = !window.SWU.Auth.isAuthenticated();
+        }
+
+        // Display pairings
+        this.displayPairings(pairing);
+
+      } catch (error) {
+        console.error('[PairingsDisplay] Error loading pairing:', error);
+        this.showError(`Error loading pairing: ${error.message}`);
+      }
+    },
+
+    displayPairings(pairing) {
+      const resultsEl = document.getElementById('results');
+      const plainOutEl = document.getElementById('plainOut');
+
+      if (!pairing.rounds || pairing.rounds.length === 0) {
+        resultsEl.innerHTML = '<p style="color: var(--muted);">No pairings data.</p>';
+        return;
+      }
+
+      console.log('[PairingsDisplay] displayPairings called, filter:', this.currentPlayerFilter);
+
+      // Apply filter
+      const pairingsForUI = this.convertToUIFormat(pairing);
+      console.log('[PairingsDisplay] Converted to UI format:', pairingsForUI);
+      
+      const filterFn = window.SWU?.UI?.filterPairings;
+      console.log('[PairingsDisplay] filterPairings available?', !!filterFn);
+      
+      const filteredPairings = filterFn ? filterFn(pairingsForUI, this.currentPlayerFilter) : pairingsForUI;
+      console.log('[PairingsDisplay] Filtered pairings:', filteredPairings);
+      
+      const displayRounds = this.convertFromUIFormat(filteredPairings, pairing);
+      console.log('[PairingsDisplay] Converted back from UI format:', displayRounds);
+
+      // Extract players and generate colors
+      const players = window.SWU.Display.extractPlayers(displayRounds);
+      const playerColors = window.SWU.Display.generatePlayerColors(players);
+
+      console.log('[PairingsDisplay] Filtered rounds:', displayRounds);
+      console.log('[PairingsDisplay] Player colors:', playerColors);
+
+      const isAdmin = window.SWU?.Auth?.isAuthenticated() || false;
+      const { html, plainText } = window.SWU.Display.renderRounds(displayRounds, playerColors, isAdmin);
+
+      console.log('[PairingsDisplay] HTML length:', html.length);
+
+      // Render to DOM
+      resultsEl.innerHTML = html;
+      plainOutEl.textContent = plainText;
+
+      // Setup checkbox listeners for admins
+      if (isAdmin) {
+        this.setupCheckboxListeners();
+      }
+
+      // Populate filter dropdown
+      this.updatePlayerFilter(pairing);
+    },
+
+    convertToUIFormat(pairing) {
+      return pairing.rounds.map(round => ({
+        round: round.round,
+        matches: round.matches.map(match => ({
+          ...match,
+          player1: match.home,
+          player2: match.away,
+          bye: !match.away || match.away.trim() === '', // bye if away is empty
+        }))
+      }));
+    },
+
+    convertFromUIFormat(filteredPairings, originalPairing) {
+      const pairingMap = {};
+      originalPairing.rounds.forEach(round => {
+        round.matches?.forEach(match => {
+          // Store both directions to handle swapped players from filterPairings
+          const key1 = `${match.home}|${match.away}`;
+          const key2 = `${match.away}|${match.home}`;
+          pairingMap[key1] = match;
+          pairingMap[key2] = match;
+        });
+      });
+
+      return filteredPairings.map(round => ({
+        round: round.round,
+        matches: round.matches.map(match => {
+          const key = `${match.player1}|${match.player2}`;
+          const original = pairingMap[key];
+          return {
+            ...original,
+            home: match.player1,
+            away: match.player2,
+            bye: match.bye === true, // preserve the bye flag
+          };
+        })
+      }));
+    },
+
+    setupCheckboxListeners() {
+      const checkboxes = document.querySelectorAll('.match-played-checkbox');
+      checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+          const matchId = e.target.getAttribute('data-match-id');
+          const roundIdx = e.target.getAttribute('data-round-idx');
+          
+        console.log('[PairingsDisplay] Match toggled:', { matchId, roundIdx, checked: e.target.checked });
+          
+          // Track changes
+          if (matchId) {
+            if (e.target.checked) {
+              this.changedMatches.add(matchId);
+            } else {
+              this.changedMatches.delete(matchId);
+            }
+          }
+
+          // Update the match data
+          if (this.currentPairingData?.rounds?.[roundIdx]) {
+            const round = this.currentPairingData.rounds[roundIdx];
+            const match = round.matches?.find(m => m.id === matchId);
+            if (match) {
+              match.played = e.target.checked;
+              // Also clean up the player names if they have colons
+              match.home = (match.home || '').replace(/:\s*$/, '').trim();
+              match.away = (match.away || '').replace(/:\s*$/, '').trim();
+            }
+          }
+        });
+      });
+    },
+
+    async handleUpdate() {
+      console.log('[PairingsDisplay] Update clicked');
+      
+      if (!this.currentPairingId || !this.currentPairingData) {
+        alert('Error: Pairing data not loaded');
+        return;
+      }
+
+      // Clean up the data before sending
+      const cleanData = JSON.parse(JSON.stringify(this.currentPairingData));
+      cleanData.rounds?.forEach(round => {
+        round.matches?.forEach(match => {
+          match.home = (match.home || '').replace(/:\s*$/, '').trim();
+          match.away = (match.away || '').replace(/:\s*$/, '').trim();
+        });
+      });
+
+      try {
+        const url = window.SWU?.Auth?.apiUrl(`/api/pairings/${this.currentPairingId}`) || `http://127.0.0.1:3000/api/pairings/${this.currentPairingId}`;
+        
+        const response = await window.SWU.Auth.authFetch(url, {
+          method: 'PUT',
+          body: JSON.stringify(cleanData),
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.message || 'Update failed');
+        }
+
+        console.log('[PairingsDisplay] Update successful');
+        alert('Pairing updated successfully');
+        this.changedMatches.clear();
+
+      } catch (error) {
+        console.error('[PairingsDisplay] Update error:', error);
+        alert(`Update failed: ${error.message}`);
+      }
+    },
+
+    async handleDelete() {
+      console.log('[PairingsDisplay] Delete clicked');
+      
+      if (!this.currentPairingId) {
+        alert('Error: Pairing ID not found');
+        return;
+      }
+
+      // Show confirmation dialog
+      const confirmed = confirm('Are you sure you want to delete this pairing? This action cannot be undone.');
+      if (!confirmed) {
+        console.log('[PairingsDisplay] Delete cancelled by user');
+        return;
+      }
+
+      try {
+        const url = window.SWU?.Auth?.apiUrl(`/api/pairings/${this.currentPairingId}`) || `http://127.0.0.1:3000/api/pairings/${this.currentPairingId}`;
+        
+        const response = await window.SWU.Auth.authFetch(url, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.message || 'Delete failed');
+        }
+
+        console.log('[PairingsDisplay] Delete successful');
+        alert('Pairing deleted successfully');
+        
+        // Redirect to home
+        window.location.href = 'index.html';
+
+      } catch (error) {
+        console.error('[PairingsDisplay] Delete error:', error);
+        alert(`Delete failed: ${error.message}`);
+      }
+    },
+
+    updatePlayerFilter(pairing) {
+      const filterSelect = document.getElementById('player-filter');
+      if (!filterSelect || !pairing.rounds) return;
+
+      const players = new Set();
+      pairing.rounds.forEach(round => {
+        round.matches?.forEach(match => {
+          const home = (match.home || '').replace(/:\s*$/, '').trim();
+          const away = (match.away || '').replace(/:\s*$/, '').trim();
+          if (home && home !== 'BYE') players.add(home);
+          if (away && away !== 'BYE') players.add(away);
+        });
+      });
+
+      // Clear existing options
+      filterSelect.innerHTML = '<option value="all">All players</option>';
+
+      // Add player options
+      const sortedPlayers = Array.from(players).sort();
+      sortedPlayers.forEach(player => {
+        const option = document.createElement('option');
+        option.value = player;
+        option.textContent = player;
+        filterSelect.appendChild(option);
+      });
+
+      filterSelect.disabled = false;
+      
+      // Set current value
+      if (sortedPlayers.includes(this.currentPlayerFilter)) {
+        filterSelect.value = this.currentPlayerFilter;
+      } else {
+        filterSelect.value = 'all';
+        this.currentPlayerFilter = 'all';
+      }
+
+      // Only add listener once on first init
+      if (!this.filterListenerAttached) {
+        this.filterListenerAttached = true;
+        filterSelect.addEventListener('change', (e) => {
+          console.log('[PairingsDisplay] Filter changed to:', e.target.value);
+          this.currentPlayerFilter = e.target.value;
+          this.displayPairings(this.currentPairingData);
+        });
+      }
+    },
+
+    showError(message) {
+      const titleEl = document.getElementById('pairing-title');
+      const resultsEl = document.getElementById('results');
+      
+      titleEl.textContent = 'Error';
+      resultsEl.innerHTML = `<p style="color: #ff6b6b;">${window.SWU.Display.escapeHtml(message)}</p>`;
+    },
+  };
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => PairingsDisplay.init());
+  } else {
+    PairingsDisplay.init();
+  }
+
+  // Expose to global scope
+  if (typeof window !== 'undefined') {
+    if (!window.SWU) window.SWU = {};
+    window.SWU.PairingsDisplay = PairingsDisplay;
+  }
+
+  // For Node.js testing
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PairingsDisplay;
+  }
+})();

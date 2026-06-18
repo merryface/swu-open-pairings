@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approve Admins - SWU Holonet Open</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="src/forms.css">
+</head>
+<body>
+  <div class="admin-page">
+    <div class="admin-container">
+      <div class="page-header">
+        <h1 class="page-title">Approve Admin Users</h1>
+      </div>
+
+      <div id="restricted-content" hidden>
+        <div class="restricted-content">
+          <div class="restricted-icon">⚠️</div>
+          <h2 class="restricted-title">Access Restricted</h2>
+          <p class="restricted-text">
+            This page is restricted to merryface only. You are not authorized to approve admins.
+          </p>
+        </div>
+      </div>
+
+      <div id="admin-content" hidden>
+        <div class="form-section">
+          <h2 class="section-title">Add New Approved Admin</h2>
+          
+          <form id="approval-form">
+            <div class="form-group">
+              <label for="approval-username" class="form-label">Username</label>
+              <input id="approval-username" type="text" class="form-input" required placeholder="e.g., admin1" />
+            </div>
+
+            <div class="form-group">
+              <label for="approval-word" class="form-label">Approval Word (Secret Code)</label>
+              <input id="approval-word" type="text" class="form-input" required placeholder="Generate a secret approval code" />
+            </div>
+
+            <div class="button-group">
+              <button type="submit" class="submit-btn admin-submit">Approve Admin</button>
+            </div>
+
+            <p id="approval-error" class="message error-message" hidden></p>
+            <p id="approval-success" class="message success-message" hidden></p>
+          </form>
+        </div>
+
+        <div class="form-section">
+          <h2 class="section-title">Approved Admins</h2>
+          <div id="approved-users-container">
+            <div class="empty-state">
+              <div class="empty-state-icon">⏳</div>
+              <p>Loading approved users...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Check authentication
+        if (!window.SWU?.Auth?.isAuthenticated?.()) {
+          window.location.href = 'login.html';
+          return;
+        }
+
+        // Check if user is merryface
+        const isMerryface = window.SWU?.Auth?.isMerryface?.();
+
+        const restrictedContent = document.getElementById('restricted-content');
+        const adminContent = document.getElementById('admin-content');
+
+        if (!isMerryface) {
+          restrictedContent.hidden = false;
+          return;
+        }
+
+        adminContent.hidden = false;
+
+        // Setup form
+        const form = document.getElementById('approval-form');
+        const errorEl = document.getElementById('approval-error');
+        const successEl = document.getElementById('approval-success');
+        const submitBtn = form.querySelector('.submit-btn');
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          try {
+            errorEl.hidden = true;
+            successEl.hidden = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Approving...';
+
+            const username = document.getElementById('approval-username').value.trim();
+            const specialWord = document.getElementById('approval-word').value.trim();
+            
+            if (!username || !specialWord) {
+              throw new Error('Username and approval word are required');
+            }
+
+            const response = await window.SWU.Auth.authFetch('/api/auth/admin/approve', {
+              method: 'POST',
+              body: JSON.stringify({ 
+                username, 
+                special_word: specialWord 
+              }),
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+              throw new Error(data.message || 'Approval failed');
+            }
+
+            // Success
+            successEl.textContent = `✓ Admin "${username}" approved successfully!`;
+            successEl.hidden = false;
+            
+            // Reset form
+            form.reset();
+            
+            // Reload approved users list
+            await loadApprovedUsers();
+
+          } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.hidden = false;
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Approve Admin';
+          }
+        });
+
+        // Load approved users
+        await loadApprovedUsers();
+
+      } catch (err) {
+        // Silent fail
+      }
+    });
+
+    async function loadApprovedUsers() {
+      try {
+        const container = document.getElementById('approved-users-container');
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><p>Loading...</p></div>';
+
+        const response = await window.SWU.Auth.authFetch('/api/auth/admin/approved-users');
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to load approved users');
+        }
+
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><p>No approved users yet.</p></div>';
+          return;
+        }
+
+        const cardsHtml = data.map(user => {
+          const createdDate = new Date(user.created_at).toLocaleString();
+          const isMerryface = user.username === 'merryface';
+          
+          return `
+            <div class="user-card">
+              <div class="user-info">
+                <span class="user-name">${escapeHtml(user.username)}${isMerryface ? ' • Super Admin' : ''}</span>
+                <div class="user-meta">
+                  <span class="user-secret">Secret: ${escapeHtml(user.special_word || 'N/A')}</span>
+                  <span>Approved: ${createdDate}</span>
+                </div>
+              </div>
+              ${!isMerryface ? `<button type="button" class="remove-btn" data-username="${escapeHtml(user.username)}">Remove</button>` : ''}
+            </div>
+          `;
+        }).join('');
+
+        container.innerHTML = `<div class="users-grid">${cardsHtml}</div>`;
+
+        // Attach remove event listeners
+        container.querySelectorAll('.remove-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const username = btn.getAttribute('data-username');
+            if (confirm(`Remove approval for "${username}"?`)) {
+              await removeApproval(username);
+            }
+          });
+        });
+
+      } catch (err) {
+        const container = document.getElementById('approved-users-container');
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❌</div><p>Error loading approved users: ${escapeHtml(err.message)}</p></div>`;
+      }
+    }
+
+    async function removeApproval(username) {
+      try {
+        const container = document.getElementById('approved-users-container');
+        container.classList.add('loading');
+
+        const response = await window.SWU.Auth.authFetch(`/api/auth/admin/approve/${encodeURIComponent(username)}`, {
+          method: 'DELETE',
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Removal failed');
+        }
+
+        await loadApprovedUsers();
+
+      } catch (err) {
+        alert(`Error removing approval: ${err.message}`);
+        await loadApprovedUsers();
+      }
+    }
+
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+  </script>
+</body>
+</html>

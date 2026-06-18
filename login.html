@@ -5,56 +5,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - SWU Holonet Open</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="src/forms.css">
 </head>
 <body>
-  <main class="container auth-container">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <h1>Login</h1>
-      <span id="auth-status" style="font-size: 0.85em; color: var(--muted);">logged off</span>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h1 class="auth-card-title">Login</h1>
+      </div>
+
+      <form id="login-form" class="auth-form-container">
+        <div class="form-group">
+          <label for="username" class="form-label">Username</label>
+          <input id="username" type="text" class="form-input" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <input id="password" type="password" class="form-input" required />
+        </div>
+
+        <button type="submit" class="submit-btn auth-submit">Login</button>
+        <p id="login-error" class="auth-message error-message" hidden></p>
+      </form>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="register.html">Register</a>
+      </div>
     </div>
-    <form id="login-form" class="auth-form">
-      <label for="username">Username</label>
-      <input id="username" type="text" required />
-
-      <label for="password">Password</label>
-      <input id="password" type="password" required />
-
-      <button type="submit" class="generate-btn">Login</button>
-      <p id="login-error" class="error-message" hidden></p>
-      <p class="auth-note">Don't have an account? <a href="register.html">Register</a></p>
-    </form>
-  </main>
+  </div>
 
   <script src="src/auth.js"></script>
   <script>
-    console.log('[LoginPage] Inline script started');
-    
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('[LoginPage] DOMContentLoaded');
-      
       try {
         // Redirect if already authenticated
         if (window.SWU?.Auth?.isAuthenticated?.()) {
-          console.log('[LoginPage] Already authenticated, redirecting');
           window.location.href = 'index.html';
           return;
         }
 
         const form = document.getElementById('login-form');
         const errorEl = document.getElementById('login-error');
+        const submitBtn = form.querySelector('.submit-btn');
         
         if (!form) {
-          console.error('[LoginPage] Form not found');
           return;
         }
 
-        console.log('[LoginPage] Setting up form handler');
         form.addEventListener('submit', async (e) => {
           e.preventDefault();
-          console.log('[LoginPage] Form submitted');
           
           try {
             errorEl.hidden = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             
@@ -62,14 +68,12 @@
               throw new Error('Username and password required');
             }
 
-            console.log('[LoginPage] Calling authFetch', { username });
             const response = await window.SWU.Auth.authFetch('/api/auth/login', {
               method: 'POST',
               body: JSON.stringify({ username, password }),
             });
 
             const data = await response.json();
-            console.log('[LoginPage] Response received', { status: response.status });
             
             if (!response.ok) {
               throw new Error(data.message || 'Login failed');
@@ -78,20 +82,17 @@
             const token = data.token || data.accessToken;
             if (!token) throw new Error('No token in response');
 
-            console.log('[LoginPage] Token received, saving auth');
             window.SWU.Auth.setAuthToken(token, data.username || username);
-            
-            console.log('[LoginPage] Redirecting to admin.html');
-            window.location.href = 'admin.html';
+            window.location.href = 'index.html';
           } catch (err) {
-            console.error('[LoginPage] Error:', err.message);
             errorEl.textContent = err.message;
             errorEl.hidden = false;
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Login';
           }
         });
-        console.log('[LoginPage] Form handler attached');
       } catch (err) {
-        console.error('[LoginPage] Fatal error:', err);
+        // Silent fail
       }
     });
   </script>

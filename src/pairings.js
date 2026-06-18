@@ -1,4 +1,5 @@
 // src/pairings.js
+// Cleaner BYE logic: uses explicit bye flag, never uses null as a player name
 
 const MAX_ROUNDS = 10;
 
@@ -10,7 +11,9 @@ const shuffle = array => {
   return array;
 };
 
-const findRoundMatches = (players, playedMap) => {
+// Match players avoiding repeats. Returns array of { player1, player2 } pairs.
+// For odd-length input, last element is the bye player (caller handles it separately)
+const matchPlayers = (players, playedMap) => {
   const n = players.length;
   const used = new Array(n).fill(false);
   const matches = [];
@@ -26,11 +29,11 @@ const findRoundMatches = (players, playedMap) => {
     for (let j = i + 1; j < n; j++) {
       if (used[j]) continue;
       const p2 = players[j];
-      const havePlayed = p1 !== null && p2 !== null && playedMap.get(p1)?.has(p2);
+      const havePlayed = playedMap.get(p1)?.has(p2);
       if (havePlayed) continue;
 
       used[j] = true;
-      matches.push({ player1: p1, player2: p2, bye: p1 === null || p2 === null });
+      matches.push({ player1: p1, player2: p2 });
 
       if (backtrack()) return true;
 
@@ -44,25 +47,16 @@ const findRoundMatches = (players, playedMap) => {
 
   if (backtrack()) return matches.slice();
 
+  // Fallback: greedy matching - pick best available opponent
   const rem = players.slice();
   const fallback = [];
-  while (rem.length) {
+  while (rem.length >= 2) {
     const a = rem.shift();
-    if (a === null) {
-      const b = rem.shift();
-      fallback.push({ player1: a, player2: b, bye: true });
-      continue;
-    }
-
+    
     let bestIdx = 0;
     let bestScore = Infinity;
     for (let k = 0; k < rem.length; k++) {
       const cand = rem[k];
-      if (cand === null) {
-        bestIdx = k;
-        bestScore = -1;
-        break;
-      }
       const cnt = playedMap.get(a)?.has(cand) ? 1 : 0;
       if (cnt < bestScore) {
         bestScore = cnt;
@@ -72,15 +66,15 @@ const findRoundMatches = (players, playedMap) => {
     }
 
     const b = rem.splice(bestIdx, 1)[0];
-    fallback.push({ player1: a, player2: b, bye: a === null || b === null });
+    fallback.push({ player1: a, player2: b });
   }
 
   return fallback;
-}
+};
 
 const hasRepeatMatch = (matches, playedMap) => {
   return matches.some(({ player1, player2 }) => {
-    return player1 !== null && player2 !== null && playedMap.get(player1)?.has(player2);
+    return playedMap.get(player1)?.has(player2);
   });
 };
 
@@ -89,20 +83,42 @@ const generatePairings = (players, rounds) => {
   if (!Number.isInteger(rounds) || rounds < 1) throw new TypeError('rounds must be a positive integer');
   if (rounds > MAX_ROUNDS) throw new TypeError(`rounds cannot exceed ${MAX_ROUNDS}`);
 
+  console.log('[Pairings] generatePairings called with:', { players, rounds });
+  
+  // Filter out null/undefined/empty players
+  const validPlayers = players.filter(p => p !== null && p !== undefined && String(p).trim() !== '');
+  console.log('[Pairings] Valid players after filtering:', validPlayers);
+  
+  if (validPlayers.length === 0) {
+    throw new Error('No valid players provided');
+  }
+
+  // Track who has played whom
   const played = new Map();
-  for (const p of players) played.set(p, new Set());
+  for (const p of validPlayers) {
+    played.set(p, new Set());
+  }
 
   const result = [];
   const maxAttempts = 10;
+  let byeRotationIndex = 0; // Simple rotation for bye assignment
 
   for (let r = 0; r < rounds; r++) {
     let matches;
     let attempt = 0;
+    let byePlayer = null;
 
     do {
-      const pool = shuffle(players.slice());
-      if (pool.length % 2 === 1) pool.push(null);
-      matches = findRoundMatches(pool, played);
+      const pool = shuffle(validPlayers.slice());
+      
+      // If odd number of players, extract one for bye (rotate through players)
+      if (pool.length % 2 === 1) {
+        byePlayer = pool[byeRotationIndex % pool.length];
+        pool.splice(pool.indexOf(byePlayer), 1);
+        byeRotationIndex++;
+      }
+      
+      matches = matchPlayers(pool, played);
       attempt += 1;
     } while (attempt < maxAttempts && hasRepeatMatch(matches, played));
 
@@ -110,13 +126,32 @@ const generatePairings = (players, rounds) => {
       console.warn(`Could not avoid repeat opponents after ${maxAttempts} attempts for round ${r + 1}. Using best available pairing.`);
     }
 
+    // Update played history and mark all matches
     for (const m of matches) {
       m.played = false;
+      m.bye = false;
       const { player1, player2 } = m;
-      if (player1 !== null && player2 !== null) {
-        played.get(player1).add(player2);
-        played.get(player2).add(player1);
+      
+      // Verify players are in played map
+      if (!played.has(player1)) {
+        throw new Error(`Player "${player1}" not found in players list`);
       }
+      if (!played.has(player2)) {
+        throw new Error(`Player "${player2}" not found in players list`);
+      }
+      
+      played.get(player1).add(player2);
+      played.get(player2).add(player1);
+    }
+    
+    // Add bye match if there's an odd player
+    if (byePlayer) {
+      matches.push({
+        player1: byePlayer,
+        player2: null,
+        bye: true,
+        played: false
+      });
     }
 
     result.push({ round: r + 1, matches });
@@ -128,7 +163,7 @@ const generatePairings = (players, rounds) => {
 const pairings = {
   MAX_ROUNDS,
   shuffle,
-  findRoundMatches,
+  matchPlayers,
   hasRepeatMatch,
   generatePairings,
 };

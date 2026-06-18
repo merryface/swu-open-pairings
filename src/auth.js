@@ -24,6 +24,7 @@ let storage = createStorage();
 const isAuthenticated = () => !!storage.getItem(AUTH_TOKEN_KEY);
 const getAuthToken = () => storage.getItem(AUTH_TOKEN_KEY);
 const getUsername = () => storage.getItem(AUTH_USERNAME_KEY);
+const isMerryface = () => getUsername() === 'merryface';
 
 const setAuthToken = (token, username) => {
   if (!token || !username) {
@@ -160,6 +161,7 @@ if (typeof window !== 'undefined') {
     isAuthenticated,
     getAuthToken,
     getUsername,
+    isMerryface,
     setAuthToken,
     clearAuthToken,
     logout,
@@ -184,6 +186,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isAuthenticated,
     getAuthToken,
     getUsername,
+    isMerryface,
     setAuthToken,
     clearAuthToken,
     logout,

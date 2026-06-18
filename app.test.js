@@ -1,11 +1,12 @@
 const pairings = require('./src/pairings');
+const display = require('./src/display');
 const ui = require('./src/ui');
 
 describe('SWU open pairings', () => {
   let originalConfirm;
 
   beforeEach(() => {
-    window.SWU = { Pairings: pairings };
+    window.SWU = { Pairings: pairings, Display: display };
     ui.setPairingsLib(pairings);
 
     document.body.innerHTML = `

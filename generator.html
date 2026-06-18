@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWU Holonet Open</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <!-- Header with navigation is injected by src/components.js -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h1 class="site-title">SWU Holonet Open</h1>
+      <span id="auth-status" style="font-size: 0.85em; color: var(--muted);"></span>
+    </div>
+
+    <label class="input-label" for="players">Players (comma separated)</label>
+    <textarea id="players" class="players-input" rows="3" placeholder="Alice, Bob, Carol, Dave, Eve"></textarea>
+
+    <div class="controls">
+      <label class="input-label" for="rounds">Rounds</label>
+      <select id="rounds" class="rounds-select">
+        <option>1</option>
+        <option>2</option>
+        <option selected>3</option>
+        <option>4</option>
+        <option>5</option>
+        <option>6</option>
+        <option>7</option>
+        <option>8</option>
+        <option>9</option>
+        <option>10</option>
+      </select>
+
+      <button id="generate" class="generate-btn">Generate Pairings</button>
+      <button id="reset" class="reset-btn">Reset</button>
+      <button id="export" class="export-btn" disabled>Export Image</button>
+    </div>
+
+    <section id="manualPairingsPanel" class="manual-pairings-panel" hidden>
+      <div class="manual-pairings-panel__inner">
+        <div class="popup-header">
+          <h2 class="popup-title">Manual Pairings</h2>
+          <button id="manual-pairings-close" class="close-btn" type="button" aria-label="Close manual pairings panel">×</button>
+        </div>
+        <label class="input-label" for="manual-pairings-input">Paste raw pairings output</label>
+        <textarea id="manual-pairings-input" class="manual-pairings-input" rows="8" placeholder="Round 1\nAlice vs Bob\nCarol: BYE\n..."></textarea>
+        <button id="manual-pairings-load" class="generate-btn">Load Manual Pairings</button>
+        <p id="manual-pairings-error" class="error-message" hidden></p>
+      </div>
+    </section>
+
+    <div class="filter-row">
+      <label class="input-label" for="player-filter">Filter pairings</label>
+      <select id="player-filter" class="player-filter-select" disabled>
+        <option value="all">All players</option>
+      </select>
+    </div>
+
+    <section id="results" class="results"></section>
+
+    <!-- Plain text output for copy/paste or posting -->
+    <pre id="plainOut" class="plain-output" aria-label="Plain pairings output" aria-live="polite"></pre>
+  </main>
+
+  <script src="src/auth.js" defer></script>
+  <script src="src/components.js" defer></script>
+  <script src="src/form-components.js" defer></script>
+  <script src="src/button-components.js" defer></script>
+  <script src="src/pairings-components.js" defer></script>
+  <script src="src/nav.js" defer></script>
+  <script src="src/display.js" defer></script>
+  <script src="src/pairings.js" defer></script>
+  <script src="src/ui.js" defer></script>
+  <script src="app.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const statusEl = document.getElementById('auth-status');
+      const logoutBtn = document.getElementById('logout-btn');
+      if (statusEl && window.SWU && window.SWU.Auth) {
+        const isAuthenticated = window.SWU.Auth.isAuthenticated();
+        statusEl.textContent = isAuthenticated ? 'logged on' : 'logged off';
+        if (logoutBtn) {
+          logoutBtn.hidden = !isAuthenticated;
+          logoutBtn.addEventListener('click', () => {
+            window.SWU.Auth.logout();
+          });
+        }
+      }
+
+      // Add Manual Pairings button to menu for generator.html
+      const menuPanel = document.getElementById('menu-panel');
+      if (menuPanel && !document.getElementById('manual-pairings-btn')) {
+        const manualBtn = document.createElement('button');
+        manualBtn.id = 'manual-pairings-btn';
+        manualBtn.className = 'menu-item';
+        manualBtn.type = 'button';
+        manualBtn.textContent = 'Manual Pairings';
+        menuPanel.appendChild(manualBtn);
+      }
+    });
+  </script>
+</body>
+</html>

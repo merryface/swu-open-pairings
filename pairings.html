@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWU Holonet Open - Pairings</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <!-- Header with navigation is injected by src/components.js -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <h1 class="site-title" id="pairing-title">Loading...</h1>
+      <span id="auth-status" style="font-size: 0.85em; color: var(--muted);"></span>
+    </div>
+
+    <!-- Admin actions (Update, Delete buttons) -->
+    <div id="admin-actions" style="display: flex; gap: 12px; margin-bottom: 28px;" hidden>
+      <button id="update-btn" class="generate-btn">Update</button>
+      <button id="delete-btn" class="reset-btn">Delete</button>
+    </div>
+
+    <!-- Back to home -->
+    <button onclick="window.location.href='index.html'" class="reset-btn" style="margin-bottom: 20px;">← Back to Home</button>
+
+    <div class="filter-row">
+      <label class="input-label" for="player-filter">Filter pairings</label>
+      <select id="player-filter" class="player-filter-select" disabled>
+        <option value="all">All players</option>
+      </select>
+    </div>
+
+    <section id="results" class="results"></section>
+
+    <!-- Plain text output for copy/paste or posting -->
+    <pre id="plainOut" class="plain-output" aria-label="Plain pairings output" aria-live="polite"></pre>
+
+    <!-- Admin buttons at bottom -->
+    <div id="admin-actions-bottom" style="display: flex; gap: 12px; margin-top: 28px;" hidden>
+      <button id="update-btn-bottom" class="generate-btn">Update</button>
+      <button id="delete-btn-bottom" class="reset-btn">Delete</button>
+    </div>
+  </main>
+
+  <script src="src/auth.js" defer></script>
+  <script src="src/components.js" defer></script>
+  <script src="src/button-components.js" defer></script>
+  <script src="src/pairings-components.js" defer></script>
+  <script src="src/nav.js" defer></script>
+  <script src="src/display.js" defer></script>
+  <script src="src/ui.js" defer></script>
+  <script src="src/pairings-display.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const statusEl = document.getElementById('auth-status');
+      const logoutBtn = document.getElementById('logout-btn');
+      if (statusEl && window.SWU && window.SWU.Auth) {
+        const isAuthenticated = window.SWU.Auth.isAuthenticated();
+        statusEl.textContent = isAuthenticated ? 'logged on' : 'logged off';
+        if (logoutBtn) {
+          logoutBtn.hidden = !isAuthenticated;
+          logoutBtn.addEventListener('click', () => {
+            window.SWU.Auth.logout();
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>

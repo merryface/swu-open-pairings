@@ -3,90 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SWU Holonet Open</title>
+  <title>SWU Holonet Open - Home</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="container">
-    <!-- GitHub repo button (top-right) - positioned relative to .container so its side margin aligns with page content -->
-    <div class="top-actions">
-      <button id="menu-toggle" class="menu-btn" type="button" aria-expanded="false" aria-controls="menu-panel" aria-label="Open menu">
-        ☰
-      </button>
-      <a class="github-btn" href="https://github.com/merryface/swu-open-pairings" target="_blank" rel="noopener noreferrer" aria-label="Open repository on GitHub">
-        <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
-          <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.22 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
-        </svg>
-        <span class="github-text">merryface/swu-open-pairings</span>
-      </a>
-    </div>
+    <!-- Header with navigation is injected by src/components.js -->
     <div style="display: flex; align-items: center; gap: 12px;">
       <h1 class="site-title">SWU Holonet Open</h1>
       <span id="auth-status" style="font-size: 0.85em; color: var(--muted);"></span>
     </div>
 
-    <label class="input-label" for="players">Players (comma separated)</label>
-    <textarea id="players" class="players-input" rows="3" placeholder="Alice, Bob, Carol, Dave, Eve"></textarea>
-
-    <div class="controls">
-      <label class="input-label" for="rounds">Rounds</label>
-      <select id="rounds" class="rounds-select">
-        <option>1</option>
-        <option>2</option>
-        <option selected>3</option>
-        <option>4</option>
-        <option>5</option>
-        <option>6</option>
-        <option>7</option>
-        <option>8</option>
-        <option>9</option>
-        <option>10</option>
-      </select>
-
-      <button id="generate" class="generate-btn">Generate Pairings</button>
-      <button id="reset" class="reset-btn">Reset</button>
-      <button id="export" class="export-btn" disabled>Export Image</button>
+    <!-- Admin actions -->
+    <div id="admin-actions" style="margin-bottom: 28px;" hidden>
+      <button onclick="window.location.href='admin-pairings.html'" class="generate-btn">Create New Pairings</button>
     </div>
 
-    <nav id="menu-panel" class="menu-panel" hidden>
-      <button id="manual-pairings-btn" class="menu-item" type="button">Manual Pairings</button>
-    </nav>
+    <!-- Generate pairings -->
+    <div style="margin-bottom: 28px;">
+      <button onclick="window.location.href='generator.html'" class="generate-btn" style="width: 100%; padding: 12px;">
+        Generate your Own
+      </button>
+    </div>
 
-    <section id="manualPairingsPanel" class="manual-pairings-panel" hidden>
-      <div class="manual-pairings-panel__inner">
-        <div class="popup-header">
-          <h2 class="popup-title">Manual Pairings</h2>
-          <button id="manual-pairings-close" class="close-btn" type="button" aria-label="Close manual pairings panel">×</button>
-        </div>
-        <label class="input-label" for="manual-pairings-input">Paste raw pairings output</label>
-        <textarea id="manual-pairings-input" class="manual-pairings-input" rows="8" placeholder="Round 1\nAlice vs Bob\nCarol: BYE\n..."></textarea>
-        <button id="manual-pairings-load" class="generate-btn">Load Manual Pairings</button>
-        <p id="manual-pairings-error" class="error-message" hidden></p>
+    <!-- Saved pairings list -->
+    <section class="saved-pairings-section">
+      <h2 class="pairings-heading">Saved Pairings</h2>
+      <div id="pairings-list" class="pairings-list">
+        <p style="color: var(--muted);">Loading pairings...</p>
       </div>
     </section>
 
-    <div class="filter-row">
-      <label class="input-label" for="player-filter">Filter pairings</label>
-      <select id="player-filter" class="player-filter-select" disabled>
-        <option value="all">All players</option>
-      </select>
-    </div>
-
-    <section id="results" class="results"></section>
-
-    <!-- Plain text output for copy/paste or posting -->
-    <pre id="plainOut" class="plain-output" aria-label="Plain pairings output" aria-live="polite"></pre>
   </main>
 
   <script src="src/auth.js" defer></script>
-  <script src="src/pairings.js" defer></script>
-  <script src="src/ui.js" defer></script>
-  <script src="app.js" defer></script>
+  <script src="src/components.js" defer></script>
+  <script src="src/nav.js" defer></script>
+  <script src="src/display.js" defer></script>
+  <script src="src/home.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const statusEl = document.getElementById('auth-status');
+      const logoutBtn = document.getElementById('logout-btn');
       if (statusEl && window.SWU && window.SWU.Auth) {
-        statusEl.textContent = window.SWU.Auth.isAuthenticated() ? 'logged on' : 'logged off';
+        const isAuthenticated = window.SWU.Auth.isAuthenticated();
+        statusEl.textContent = isAuthenticated ? 'logged on' : 'logged off';
+        if (logoutBtn) {
+          logoutBtn.hidden = !isAuthenticated;
+          logoutBtn.addEventListener('click', () => {
+            window.SWU.Auth.logout();
+          });
+        }
       }
     });
   </script>

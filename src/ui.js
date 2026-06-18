@@ -3,6 +3,9 @@
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+// Detect if we're on admin-pairings page - if so, don't use localStorage
+const isAdminPage = window.location.pathname.includes('admin-pairings');
+
 let elements = null;
 let pairingsLib = null;
 let currentPairings = null;
@@ -54,8 +57,8 @@ const createOption = (value, label) => {
 const createPlayerNameSpan = (player, matchId) => {
   const span = document.createElement('span');
   span.className = 'player-name';
-  span.textContent = player;
-  span.setAttribute('data-player', player);
+  span.textContent = player || '';
+  span.setAttribute('data-player', player || '');
   span.setAttribute('data-match-id', matchId);
   span.style.cursor = 'pointer';
   return span;
@@ -65,8 +68,12 @@ const getSortedPlayers = pairings => {
   const players = new Set();
   pairings.forEach(round => {
     round.matches.forEach(match => {
-      if (match.player1 !== null) players.add(match.player1);
-      if (match.player2 !== null) players.add(match.player2);
+      if (match.player1 !== null && match.player1 !== undefined && typeof match.player1 === 'string') {
+        players.add(match.player1);
+      }
+      if (match.player2 !== null && match.player2 !== undefined && typeof match.player2 === 'string') {
+        players.add(match.player2);
+      }
     });
   });
   return Array.from(players).sort();
@@ -155,7 +162,7 @@ const loadManualPairingsFromText = raw => {
   const nameColors = {};
   players.forEach((player, index) => {
     const hue = Math.round(((index * 360) / players.length + 40) % 360);
-    nameColors[player] = hslToHex(hue, 78, 56);
+    nameColors[player] = window.SWU.Display.hslToHex(hue, 78, 56);
   });
 
   ensurePlayerStyles(nameColors);
@@ -214,10 +221,14 @@ const getNextMonthDeadline = () => {
 };
 
 const savePairings = pairings => {
-  localStorage.setItem('swu-pairings', JSON.stringify(pairings));
+  if (!isAdminPage) {
+    localStorage.setItem('swu-pairings', JSON.stringify(pairings));
+  }
 };
 
 const restorePairings = () => {
+  if (isAdminPage) return null;
+  
   const saved = localStorage.getItem('swu-pairings');
   if (!saved) return null;
 
@@ -230,6 +241,8 @@ const restorePairings = () => {
 };
 
 const saveWinnerSelections = () => {
+  if (isAdminPage) return;
+  
   const winners = [];
   elements.resultsEl.querySelectorAll('.player-name.winner-selected').forEach(el => {
     winners.push({
@@ -241,6 +254,8 @@ const saveWinnerSelections = () => {
 };
 
 const restoreWinnerSelections = () => {
+  if (isAdminPage) return;
+  
   const saved = localStorage.getItem('swu-winners');
   if (!saved) return;
 
@@ -281,9 +296,13 @@ const buildMatchItem = (match, matchId) => {
   checkbox.id = `played-${matchId}`;
   checkbox.setAttribute('data-match-id', matchId);
   checkbox.checked = !!match.played;
+  
+  const isBye = match.bye === true;
+  const playerName = match.player1 || match.player2 || 'BYE';
+  
   checkbox.setAttribute('aria-label',
-    match.bye
-      ? `Mark ${match.player1 === null ? match.player2 : match.player1} bye as played`
+    isBye
+      ? `Mark ${playerName} bye as played`
       : `Mark ${match.player1} vs ${match.player2} as played`
   );
 
@@ -295,10 +314,9 @@ const buildMatchItem = (match, matchId) => {
   li.appendChild(checkbox);
   li.appendChild(label);
 
-  if (match.bye) {
+  if (isBye) {
     li.classList.add('bye');
-    const who = match.player1 === null ? match.player2 : match.player1;
-    li.appendChild(createPlayerNameSpan(who, matchId));
+    li.appendChild(createPlayerNameSpan(playerName, matchId));
     li.appendChild(document.createTextNode(': BYE'));
   } else {
     li.appendChild(createPlayerNameSpan(match.player1, matchId));
@@ -353,8 +371,8 @@ const render = (pairings, filterPlayer = 'all') => {
     plainLines.push(`Round ${round.round}`);
     round.matches.forEach(match => {
       if (match.bye) {
-        const who = match.player1 === null ? match.player2 : match.player1;
-        plainLines.push(`${who}: BYE`);
+        const playerName = match.player1 || match.player2 || 'BYE';
+        plainLines.push(`${playerName}: BYE`);
       } else {
         plainLines.push(`${match.player1} vs ${match.player2}`);
       }
@@ -410,17 +428,7 @@ const appendPlainTextLine = (container, line) => {
   container.appendChild(div);
 };
 
-const hslToHex = (h, s, l) => {
-  s /= 100;
-  l /= 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = n => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(-1, Math.min(Math.min(k - 3, 9 - k), 1));
-    return Math.round(255 * color).toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
-};
+
 
 const initApp = () => {
   elements = {
@@ -471,14 +479,16 @@ const initApp = () => {
   resultsEl.setAttribute('tabindex', '-1');
   menuToggleBtn?.setAttribute('aria-expanded', 'false');
 
-  const savedPlayers = localStorage.getItem('swu-players');
-  if (savedPlayers) playersEl.value = savedPlayers;
+  if (!isAdminPage) {
+    const savedPlayers = localStorage.getItem('swu-players');
+    if (savedPlayers) playersEl.value = savedPlayers;
 
-  const savedRounds = localStorage.getItem('swu-rounds');
-  if (savedRounds) roundsEl.value = savedRounds;
+    const savedRounds = localStorage.getItem('swu-rounds');
+    if (savedRounds) roundsEl.value = savedRounds;
 
-  playersEl.addEventListener('input', () => localStorage.setItem('swu-players', playersEl.value));
-  roundsEl.addEventListener('input', () => localStorage.setItem('swu-rounds', roundsEl.value));
+    playersEl.addEventListener('input', () => localStorage.setItem('swu-players', playersEl.value));
+    roundsEl.addEventListener('input', () => localStorage.setItem('swu-rounds', roundsEl.value));
+  }
 
   const toggleMenuPanel = () => {
     const isHidden = menuPanel.hasAttribute('hidden');
@@ -514,7 +524,7 @@ const initApp = () => {
     const nameColors = {};
     players.forEach((player, index) => {
       const hue = Math.round(((index * 360) / players.length + 40) % 360);
-      nameColors[player] = hslToHex(hue, 78, 56);
+      nameColors[player] = window.SWU.Display.hslToHex(hue, 78, 56);
     });
 
     ensurePlayerStyles(nameColors);
@@ -536,11 +546,11 @@ const initApp = () => {
   });
 
   menuToggleBtn.addEventListener('click', toggleMenuPanel);
-  manualPairingsBtn.addEventListener('click', openManualPairingsPanel);
+  manualPairingsBtn?.addEventListener('click', openManualPairingsPanel);
   manualPairingsCloseBtn?.addEventListener('click', () => {
     manualPairingsPanel.setAttribute('hidden', '');
   });
-  manualPairingsLoadBtn.addEventListener('click', () => {
+  manualPairingsLoadBtn?.addEventListener('click', () => {
     const raw = manualPairingsInput.value;
     try {
       loadManualPairingsFromText(raw);
@@ -595,10 +605,12 @@ const initApp = () => {
 
   resetBtn.addEventListener('click', () => {
     if (!confirm('Clear all saved data (player names, rounds, pairings, and winner selections)?')) return;
-    localStorage.removeItem('swu-players');
-    localStorage.removeItem('swu-rounds');
-    localStorage.removeItem('swu-pairings');
-    localStorage.removeItem('swu-winners');
+    if (!isAdminPage) {
+      localStorage.removeItem('swu-players');
+      localStorage.removeItem('swu-rounds');
+      localStorage.removeItem('swu-pairings');
+      localStorage.removeItem('swu-winners');
+    }
     playersEl.value = '';
     roundsEl.value = '1';
     clearElement(resultsEl);
@@ -627,7 +639,7 @@ const initApp = () => {
       const nameColors = {};
       players.forEach((player, index) => {
         const hue = Math.round(((index * 360) / players.length + 40) % 360);
-        nameColors[player] = hslToHex(hue, 78, 56);
+        nameColors[player] = window.SWU.Display.hslToHex(hue, 78, 56);
       });
       ensurePlayerStyles(nameColors);
       currentNameColors = nameColors;
@@ -665,5 +677,11 @@ if (typeof module !== 'undefined' && module.exports) {
 
 if (typeof window !== 'undefined') {
   window.SWU = window.SWU || {};
-  window.SWU.UI = window.SWU.UI || { initApp };
+  window.SWU.UI = window.SWU.UI || { 
+    initApp,
+    filterPairings,
+    updatePlayerFilterOptions,
+    getCurrentPairings: () => currentPairings,
+    setCurrentPairings: (pairings) => { currentPairings = pairings; },
+  };
 }

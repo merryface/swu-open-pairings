@@ -138,7 +138,7 @@ body{
   cursor:pointer;
   user-select:none;
 }
-.match-item.bye .player-name{margin-right:4px}
+.match-item.bye .player-name{}
 
 /* Bye lines emphasis */
 .match-item.bye { font-weight:700; color:var(--accent); }
@@ -153,7 +153,7 @@ body{
   border:1px solid rgba(255,255,255,0.06);
 }
 
-.player-name{font-weight:700;margin-right:6px;text-shadow:0 1px 0 rgba(0,0,0,0.6)}
+.player-name{font-weight:700;text-shadow:0 1px 0 rgba(0,0,0,0.6)}
 
 /* visual break between rounds */
 /* removed .round-break — separators are now in the plain output */
@@ -245,6 +245,11 @@ body::after{
   padding:10px;
   backdrop-filter:blur(14px);
   z-index:1150;
+  display:flex;
+  flex-direction:column;
+}
+.menu-panel[hidden]{
+  display:none;
 }
 
 .menu-item{
@@ -334,7 +339,7 @@ body::after{
   .rounds-select,.player-filter-select,.group-select,.players-input{width:100%;}
   .generate-btn,.reset-btn,.export-btn{width:100%;justify-content:center;}
   .filter-row{flex-direction:column;align-items:stretch;gap:12px;}
-  .menu-panel{position:fixed;left:50%;transform:translateX(-50%);top:10%;right:auto;width:calc(100vw - 24px);}\n
+  .menu-panel{position:fixed;left:50%;transform:translateX(-50%);top:10%;right:auto;width:calc(100vw - 24px);display:flex;flex-direction:column;}
   .manual-pairings-panel__inner{width:min(100%,calc(100vw - 24px));max-height:80vh;padding:18px;}
   .manual-pairings-input{min-height:160px;}
   .popup-header{flex-direction:column;align-items:flex-start;gap:12px;}
@@ -374,4 +379,51 @@ body::after{
   letter-spacing:0.5px;
   text-transform:uppercase;
   white-space:nowrap;
+}
+
+/* Home page - saved pairings list */
+.saved-pairings-section {
+  margin-top: 28px;
+}
+
+.pairings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pairing-link-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, rgba(255,232,31,0.08), rgba(255,232,31,0.03));
+  border: 1px solid rgba(255,232,31,0.2);
+  border-radius: 10px;
+  text-decoration: none;
+  color: #e6eef8;
+  cursor: pointer;
+  transition: all 200ms ease;
+  font-weight: 500;
+}
+
+.pairing-link-btn:hover {
+  background: linear-gradient(180deg, rgba(255,232,31,0.12), rgba(255,232,31,0.06));
+  border-color: rgba(255,232,31,0.35);
+  transform: translateX(4px);
+  box-shadow: 0 8px 24px rgba(255,232,31,0.1);
+}
+
+.pairing-title {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.pairing-meta {
+  color: var(--muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
