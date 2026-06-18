@@ -84,7 +84,17 @@ const filterPairings = (pairings, player) => {
       round: round.round,
       matches: round.matches
         .map((match, index) => ({ ...match, matchIndex: index }))
-        .filter(match => match.player1 === player || match.player2 === player),
+        .filter(match => match.player1 === player || match.player2 === player)
+        .map(match => {
+          if (match.player2 === player) {
+            return {
+              ...match,
+              player1: player,
+              player2: match.player1,
+            };
+          }
+          return match;
+        }),
     }))
     .filter(round => round.matches.length > 0);
 };

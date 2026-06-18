@@ -144,6 +144,18 @@ Carol: BYE
     ]);
   });
 
+  test('filterPairings always places selected player first', () => {
+    const pairingsData = [
+      { round: 1, matches: [{ player1: 'Bob', player2: 'Alice', bye: false }] },
+      { round: 2, matches: [{ player1: 'Alice', player2: 'Carol', bye: false }] },
+    ];
+
+    expect(ui.filterPairings(pairingsData, 'Alice')).toEqual([
+      { round: 1, matches: [{ player1: 'Alice', player2: 'Bob', bye: false, matchIndex: 0 }] },
+      { round: 2, matches: [{ player1: 'Alice', player2: 'Carol', bye: false, matchIndex: 0 }] },
+    ]);
+  });
+
   test('savePairings and restorePairings persist data to localStorage', () => {
     const pairingsData = [{ round: 1, matches: [{ player1: 'X', player2: 'Y', bye: false, played: true }] }];
     ui.savePairings(pairingsData);
