@@ -9,38 +9,75 @@ let currentPairings = null;
 let currentNameColors = {};
 let currentPlayerFilter = 'all';
 
-function setPairingsLib(lib) {
+const setPairingsLib = lib => {
   pairingsLib = lib;
-}
+};
 
-function getPlayersFromText(raw) {
-  return raw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-}
+const getPlayersFromText = raw => raw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
 
-function ordinalSuffix(n) {
+const ordinalSuffix = n => {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return s[(v - 20) % 10] || s[v] || s[0];
-}
+};
 
-function formatDateHeading(date) {
+const formatDateHeading = date => {
   const wd = WEEKDAYS[date.getDay()];
   const day = date.getDate();
   const mo = MONTHS[date.getMonth()];
   const year = date.getFullYear();
   return `${wd} ${day}${ordinalSuffix(day)} ${mo} ${year}`;
-}
+};
 
-function parseMatchId(matchId) {
+const parseMatchId = matchId => {
   const match = /^r(\d+)-m(\d+)$/.exec(matchId);
   if (!match) return null;
   return {
     roundIndex: parseInt(match[1], 10) - 1,
     matchIndex: parseInt(match[2], 10),
   };
-}
+};
 
-function filterPairings(pairings, player) {
+const clearElement = el => {
+  while (el.firstChild) {
+    el.removeChild(el.firstChild);
+  }
+};
+
+const createOption = (value, label) => {
+  const option = document.createElement('option');
+  option.value = value;
+  option.textContent = label;
+  return option;
+};
+
+const createPlayerNameSpan = (player, matchId) => {
+  const span = document.createElement('span');
+  span.className = 'player-name';
+  span.textContent = player;
+  span.setAttribute('data-player', player);
+  span.setAttribute('data-match-id', matchId);
+  span.style.cursor = 'pointer';
+  return span;
+};
+
+const getSortedPlayers = pairings => {
+  const players = new Set();
+  pairings.forEach(round => {
+    round.matches.forEach(match => {
+      if (match.player1 !== null) players.add(match.player1);
+      if (match.player2 !== null) players.add(match.player2);
+    });
+  });
+  return Array.from(players).sort();
+};
+
+const renderPlainOutput = lines => {
+  clearElement(elements.plainOutEl);
+  lines.forEach(line => appendPlainTextLine(elements.plainOutEl, line));
+};
+
+const filterPairings = (pairings, player) => {
   if (!pairings || player === 'all' || !player) return pairings;
   return pairings
     .map(round => ({
@@ -50,29 +87,101 @@ function filterPairings(pairings, player) {
         .filter(match => match.player1 === player || match.player2 === player),
     }))
     .filter(round => round.matches.length > 0);
-}
+};
 
-function updatePlayerFilterOptions(players) {
-  const filterEl = elements.filterEl;
-  filterEl.innerHTML = '';
+const parseManualPairings = raw => {
+  if (typeof raw !== 'string') throw new TypeError('Manual pairings input must be text');
 
-  const allOption = document.createElement('option');
-  allOption.value = 'all';
-  allOption.textContent = 'All players';
-  filterEl.appendChild(allOption);
+  const lines = raw.split(/\r?\n/).map(line => line.trim());
+  const rounds = [];
+  let currentRound = null;
 
-  players.forEach(player => {
-    const option = document.createElement('option');
-    option.value = player;
-    option.textContent = player;
-    filterEl.appendChild(option);
+  for (const line of lines) {
+    if (!line) continue;
+
+    const roundMatch = /^Round\s+(\d+)/i.exec(line);
+    if (roundMatch) {
+      currentRound = { round: parseInt(roundMatch[1], 10), matches: [] };
+      rounds.push(currentRound);
+      continue;
+    }
+
+    if (!currentRound) continue;
+    if (/^-{3,}$/.test(line)) continue;
+    if (/^\*\*\*DEADLINE:/i.test(line)) break;
+    if (/^@/.test(line)) continue;
+    if (/^The pairings/i.test(line)) continue;
+
+    const byeMatch = /^(.*?)\s*:\s*BYE$/i.exec(line);
+    if (byeMatch) {
+      const player = byeMatch[1].trim();
+      if (player) {
+        currentRound.matches.push({ player1: player, player2: null, bye: true, played: false });
+        continue;
+      }
+    }
+
+    const vsMatch = /^(.*?)\s+vs\s+(.*?)$/i.exec(line);
+    if (vsMatch) {
+      const player1 = vsMatch[1].trim();
+      const player2 = vsMatch[2].trim();
+      if (player1 && player2) {
+        currentRound.matches.push({ player1, player2, bye: false, played: false });
+        continue;
+      }
+    }
+  }
+
+  if (rounds.length === 0 || rounds.every(round => round.matches.length === 0)) {
+    throw new Error('Could not parse manual pairings. Please paste valid raw pairings output.');
+  }
+
+  return rounds;
+};
+
+const loadManualPairingsFromText = raw => {
+  const pairings = parseManualPairings(raw);
+  const players = getSortedPlayers(pairings);
+  const nameColors = {};
+  players.forEach((player, index) => {
+    const hue = Math.round(((index * 360) / players.length + 40) % 360);
+    nameColors[player] = hslToHex(hue, 78, 56);
   });
 
-  filterEl.disabled = players.length === 0;
-  filterEl.value = currentPlayerFilter || 'all';
-}
+  ensurePlayerStyles(nameColors);
+  currentPairings = pairings;
+  currentNameColors = nameColors;
+  currentPlayerFilter = 'all';
+  updatePlayerFilterOptions(players);
+  elements.exportBtn.disabled = false;
+  savePairings(currentPairings);
+  render(currentPairings, currentPlayerFilter);
+  restoreWinnerSelections();
+  return currentPairings;
+};
 
-function ensurePlayerStyles(nameColors) {
+const updatePlayerFilterOptions = players => {
+  const filterEl = elements.filterEl;
+  clearElement(filterEl);
+
+  filterEl.appendChild(createOption('all', 'All players'));
+
+  players.forEach(player => filterEl.appendChild(createOption(player, player)));
+
+  filterEl.disabled = players.length === 0;
+  const selectedValue = players.includes(currentPlayerFilter) ? currentPlayerFilter : 'all';
+  filterEl.value = selectedValue;
+  currentPlayerFilter = selectedValue;
+};
+
+const escapeCssString = value => {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+  return value.replace(/([\\"'\[\]\:\.\,\>\+\~\^\$\*\|\=])/g, '\\$1');
+};
+
+const ensurePlayerStyles = nameColors => {
   const styleId = 'player-colors';
   let styleEl = document.getElementById(styleId);
   if (!styleEl) {
@@ -83,22 +192,22 @@ function ensurePlayerStyles(nameColors) {
 
   styleEl.textContent = Object.entries(nameColors)
     .map(([name, hex]) => {
-      const esc = name.replace(/"/g, '\\"');
+      const esc = escapeCssString(name);
       return `.player-name[data-player="${esc}"]{ color: ${hex}; }`;
     })
     .join('\n');
-}
+};
 
-function getNextMonthDeadline() {
+const getNextMonthDeadline = () => {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 15, 20, 0, 0));
-}
+};
 
-function savePairings(pairings) {
+const savePairings = pairings => {
   localStorage.setItem('swu-pairings', JSON.stringify(pairings));
-}
+};
 
-function restorePairings() {
+const restorePairings = () => {
   const saved = localStorage.getItem('swu-pairings');
   if (!saved) return null;
 
@@ -108,9 +217,9 @@ function restorePairings() {
     console.error('Failed to restore pairings:', e);
     return null;
   }
-}
+};
 
-function saveWinnerSelections() {
+const saveWinnerSelections = () => {
   const winners = [];
   elements.resultsEl.querySelectorAll('.player-name.winner-selected').forEach(el => {
     winners.push({
@@ -119,24 +228,27 @@ function saveWinnerSelections() {
     });
   });
   localStorage.setItem('swu-winners', JSON.stringify(winners));
-}
+};
 
-function restoreWinnerSelections() {
+const restoreWinnerSelections = () => {
   const saved = localStorage.getItem('swu-winners');
   if (!saved) return;
 
   try {
     const winners = JSON.parse(saved);
     winners.forEach(({ matchId, player }) => {
-      const el = elements.resultsEl.querySelector(`.player-name[data-match-id="${matchId}"][data-player="${player}"]`);
-      if (el) el.classList.add('winner-selected');
+      elements.resultsEl.querySelectorAll('.player-name').forEach(el => {
+        if (el.getAttribute('data-match-id') === matchId && el.getAttribute('data-player') === player) {
+          el.classList.add('winner-selected');
+        }
+      });
     });
   } catch (e) {
     console.error('Failed to restore winner selections:', e);
   }
-}
+};
 
-function updateMatchPlayed(matchId, played) {
+const updateMatchPlayed = (matchId, played) => {
   if (!currentPairings) return;
   const matchRef = parseMatchId(matchId);
   if (!matchRef) return;
@@ -146,9 +258,9 @@ function updateMatchPlayed(matchId, played) {
 
   round.matches[matchRef.matchIndex].played = played;
   savePairings(currentPairings);
-}
+};
 
-function buildMatchItem(match, matchId) {
+const buildMatchItem = (match, matchId) => {
   const li = document.createElement('li');
   li.className = 'match-item';
   li.setAttribute('role', 'listitem');
@@ -176,38 +288,18 @@ function buildMatchItem(match, matchId) {
   if (match.bye) {
     li.classList.add('bye');
     const who = match.player1 === null ? match.player2 : match.player1;
-    const span = document.createElement('span');
-    span.className = 'player-name';
-    span.textContent = who;
-    span.setAttribute('data-player', who);
-    span.setAttribute('data-match-id', matchId);
-    span.style.cursor = 'pointer';
-    li.appendChild(span);
+    li.appendChild(createPlayerNameSpan(who, matchId));
     li.appendChild(document.createTextNode(': BYE'));
   } else {
-    const span1 = document.createElement('span');
-    span1.className = 'player-name';
-    span1.textContent = match.player1;
-    span1.setAttribute('data-player', match.player1);
-    span1.setAttribute('data-match-id', matchId);
-    span1.style.cursor = 'pointer';
-
-    const span2 = document.createElement('span');
-    span2.className = 'player-name';
-    span2.textContent = match.player2;
-    span2.setAttribute('data-player', match.player2);
-    span2.setAttribute('data-match-id', matchId);
-    span2.style.cursor = 'pointer';
-
-    li.appendChild(span1);
+    li.appendChild(createPlayerNameSpan(match.player1, matchId));
     li.appendChild(document.createTextNode('vs '));
-    li.appendChild(span2);
+    li.appendChild(createPlayerNameSpan(match.player2, matchId));
   }
 
   return li;
-}
+};
 
-function buildRoundBox(round) {
+const buildRoundBox = round => {
   const box = document.createElement('div');
   box.className = 'round-box';
 
@@ -229,11 +321,11 @@ function buildRoundBox(round) {
   });
   box.appendChild(ul);
   return box;
-}
+};
 
-function render(pairings, filterPlayer = 'all') {
+const render = (pairings, filterPlayer = 'all') => {
   const resultsEl = elements.resultsEl;
-  resultsEl.innerHTML = '';
+  clearElement(resultsEl);
   const visiblePairings = filterPairings(pairings, filterPlayer) || [];
 
   const heading = document.createElement('h2');
@@ -267,26 +359,48 @@ function render(pairings, filterPlayer = 'all') {
   plainLines.push(`***DEADLINE: ${WEEKDAYS[deadline.getUTCDay()]} ${day}${ordinalSuffix(day)} ${month} 20:00 UTC***`);
   plainLines.push('<br>');
 
-  const allPlayers = new Set();
-  visiblePairings.forEach(round => {
-    round.matches.forEach(match => {
-      if (match.player1 !== null) allPlayers.add(match.player1);
-      if (match.player2 !== null) allPlayers.add(match.player2);
-    });
-  });
+  getSortedPlayers(visiblePairings).forEach(player => plainLines.push(`@${player}`));
 
-  Array.from(allPlayers).sort().forEach(player => plainLines.push(`@${player}`));
+  renderPlainOutput(plainLines);
+};
 
-  elements.plainOutEl.innerHTML = '';
-  plainLines.forEach(line => {
-    const div = document.createElement('div');
-    const htmlLine = line.replace(/@([\w\-\s]+)/g, (m, name) => `<span class="at-name"> @${name.trim()}</span>`);
-    div.innerHTML = htmlLine;
-    elements.plainOutEl.appendChild(div);
-  });
-}
+const appendPlainTextLine = (container, line) => {
+  const div = document.createElement('div');
 
-function hslToHex(h, s, l) {
+  if (line === '<br>') {
+    div.appendChild(document.createElement('br'));
+    container.appendChild(div);
+    return;
+  }
+
+  const mentionRE = /@([\w\-\s]+)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRE.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      div.appendChild(document.createTextNode(line.slice(lastIndex, match.index)));
+    }
+
+    const span = document.createElement('span');
+    span.className = 'at-name';
+    span.textContent = match[0];
+    div.appendChild(span);
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < line.length) {
+    div.appendChild(document.createTextNode(line.slice(lastIndex)));
+  }
+
+  if (!div.hasChildNodes()) {
+    div.textContent = line;
+  }
+
+  container.appendChild(div);
+};
+
+const hslToHex = (h, s, l) => {
   s /= 100;
   l /= 100;
   const a = s * Math.min(l, 1 - l);
@@ -296,9 +410,9 @@ function hslToHex(h, s, l) {
     return Math.round(255 * color).toString(16).padStart(2, '0');
   };
   return `#${f(0)}${f(8)}${f(4)}`;
-}
+};
 
-function initApp() {
+const initApp = () => {
   elements = {
     playersEl: document.getElementById('players'),
     roundsEl: document.getElementById('rounds'),
@@ -308,9 +422,33 @@ function initApp() {
     filterEl: document.getElementById('player-filter'),
     resultsEl: document.getElementById('results'),
     plainOutEl: document.getElementById('plainOut'),
+    menuToggleBtn: document.getElementById('menu-toggle'),
+    menuPanel: document.getElementById('menu-panel'),
+    manualPairingsBtn: document.getElementById('manual-pairings-btn'),
+    manualPairingsPanel: document.getElementById('manualPairingsPanel'),
+    manualPairingsInput: document.getElementById('manual-pairings-input'),
+    manualPairingsLoadBtn: document.getElementById('manual-pairings-load'),
+    manualPairingsCloseBtn: document.getElementById('manual-pairings-close'),
+    manualPairingsErrorEl: document.getElementById('manual-pairings-error'),
   };
 
-  const { playersEl, roundsEl, generateBtn, resetBtn, exportBtn, filterEl, resultsEl } = elements;
+  const {
+    playersEl,
+    roundsEl,
+    generateBtn,
+    resetBtn,
+    exportBtn,
+    filterEl,
+    resultsEl,
+    menuToggleBtn,
+    menuPanel,
+    manualPairingsBtn,
+    manualPairingsPanel,
+    manualPairingsInput,
+    manualPairingsLoadBtn,
+    manualPairingsCloseBtn,
+    manualPairingsErrorEl,
+  } = elements;
 
   setPairingsLib(window.SWU?.Pairings || null);
 
@@ -321,6 +459,7 @@ function initApp() {
   resultsEl.setAttribute('aria-live', 'polite');
   resultsEl.setAttribute('aria-label', 'Pairings results');
   resultsEl.setAttribute('tabindex', '-1');
+  menuToggleBtn?.setAttribute('aria-expanded', 'false');
 
   const savedPlayers = localStorage.getItem('swu-players');
   if (savedPlayers) playersEl.value = savedPlayers;
@@ -331,13 +470,34 @@ function initApp() {
   playersEl.addEventListener('input', () => localStorage.setItem('swu-players', playersEl.value));
   roundsEl.addEventListener('input', () => localStorage.setItem('swu-rounds', roundsEl.value));
 
+  const toggleMenuPanel = () => {
+    const isHidden = menuPanel.hasAttribute('hidden');
+    if (isHidden) {
+      menuPanel.removeAttribute('hidden');
+      menuToggleBtn.setAttribute('aria-expanded', 'true');
+    } else {
+      menuPanel.setAttribute('hidden', '');
+      menuToggleBtn.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  const openManualPairingsPanel = () => {
+    manualPairingsPanel.removeAttribute('hidden');
+    menuPanel.setAttribute('hidden', '');
+    menuToggleBtn.setAttribute('aria-expanded', 'false');
+    manualPairingsInput.focus();
+  };
+
   generateBtn.addEventListener('click', () => {
     const raw = playersEl.value;
     const players = getPlayersFromText(raw);
     const rounds = parseInt(roundsEl.value, 10) || 1;
 
     if (players.length === 0) {
-      resultsEl.innerHTML = '<em>Please enter at least one player.</em>';
+      clearElement(resultsEl);
+      const message = document.createElement('em');
+      message.textContent = 'Please enter at least one player.';
+      resultsEl.appendChild(message);
       return;
     }
 
@@ -365,7 +525,31 @@ function initApp() {
     resultsEl.focus();
   });
 
-  exportBtn.addEventListener('click', () => exportPairingsImage(currentPairings, currentNameColors));
+  menuToggleBtn.addEventListener('click', toggleMenuPanel);
+  manualPairingsBtn.addEventListener('click', openManualPairingsPanel);
+  manualPairingsCloseBtn?.addEventListener('click', () => {
+    manualPairingsPanel.setAttribute('hidden', '');
+  });
+  manualPairingsLoadBtn.addEventListener('click', () => {
+    const raw = manualPairingsInput.value;
+    try {
+      loadManualPairingsFromText(raw);
+      manualPairingsErrorEl.hidden = true;
+      manualPairingsErrorEl.textContent = '';
+      manualPairingsPanel.setAttribute('hidden', '');
+    } catch (err) {
+      manualPairingsErrorEl.hidden = false;
+      manualPairingsErrorEl.textContent = err.message;
+    }
+  });
+
+  exportBtn.addEventListener('click', () => {
+    if (typeof exportPairingsImage === 'function') {
+      exportPairingsImage(currentPairings, currentNameColors);
+    } else {
+      console.warn('Export image function is unavailable.');
+    }
+  });
 
   filterEl.addEventListener('change', () => {
     currentPlayerFilter = filterEl.value;
@@ -380,9 +564,13 @@ function initApp() {
     const matchId = target.getAttribute('data-match-id');
     if (!matchId) return;
 
-    const playersInMatch = resultsEl.querySelectorAll(`.player-name[data-match-id="${matchId}"]`);
+    const playersInMatch = resultsEl.querySelectorAll('.player-name');
     const isSelected = target.classList.contains('winner-selected');
-    playersInMatch.forEach(el => el.classList.toggle('winner-selected', !isSelected));
+    playersInMatch.forEach(el => {
+      if (el.getAttribute('data-match-id') === matchId) {
+        el.classList.toggle('winner-selected', !isSelected);
+      }
+    });
     saveWinnerSelections();
   });
 
@@ -403,8 +591,8 @@ function initApp() {
     localStorage.removeItem('swu-winners');
     playersEl.value = '';
     roundsEl.value = '1';
-    resultsEl.innerHTML = '';
-    elements.plainOutEl.innerHTML = '';
+    clearElement(resultsEl);
+    clearElement(elements.plainOutEl);
     currentPairings = null;
     currentNameColors = {};
     currentPlayerFilter = 'all';
@@ -442,7 +630,7 @@ function initApp() {
     render(savedPairings, currentPlayerFilter);
     restoreWinnerSelections();
   }
-}
+};
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -454,6 +642,8 @@ if (typeof module !== 'undefined' && module.exports) {
     updatePlayerFilterOptions,
     filterPairings,
     parseMatchId,
+    parseManualPairings,
+    loadManualPairingsFromText,
     savePairings,
     restorePairings,
     updateMatchPlayed,

@@ -2,20 +2,20 @@
 
 const MAX_ROUNDS = 10;
 
-function shuffle(array) {
+const shuffle = array => {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
-}
+};
 
-function findRoundMatches(players, playedMap) {
+const findRoundMatches = (players, playedMap) => {
   const n = players.length;
   const used = new Array(n).fill(false);
   const matches = [];
 
-  function backtrack() {
+  const backtrack = () => {
     let i = 0;
     while (i < n && used[i]) i++;
     if (i >= n) return true;
@@ -40,7 +40,7 @@ function findRoundMatches(players, playedMap) {
 
     used[i] = false;
     return false;
-  }
+  };
 
   if (backtrack()) return matches.slice();
 
@@ -78,13 +78,13 @@ function findRoundMatches(players, playedMap) {
   return fallback;
 }
 
-function hasRepeatMatch(matches, playedMap) {
+const hasRepeatMatch = (matches, playedMap) => {
   return matches.some(({ player1, player2 }) => {
     return player1 !== null && player2 !== null && playedMap.get(player1)?.has(player2);
   });
-}
+};
 
-function generatePairings(players, rounds) {
+const generatePairings = (players, rounds) => {
   if (!Array.isArray(players)) throw new TypeError('players must be an array');
   if (!Number.isInteger(rounds) || rounds < 1) throw new TypeError('rounds must be a positive integer');
   if (rounds > MAX_ROUNDS) throw new TypeError(`rounds cannot exceed ${MAX_ROUNDS}`);
@@ -123,7 +123,7 @@ function generatePairings(players, rounds) {
   }
 
   return result;
-}
+};
 
 const pairings = {
   MAX_ROUNDS,

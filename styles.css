@@ -99,10 +99,11 @@ body{
   gap:10px;
   flex-wrap:wrap;
   padding:14px 12px;
-  border-bottom:1px solid rgba(220,220,220,0.06); /* thin light grey line */
+  border-bottom:1px solid rgba(220,220,220,0.06);
   background: transparent;
   color:#e6eef8;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
+  font-size:0.875rem;
 }
 .match-item:last-child{border-bottom:0}
 .match-played-checkbox{
@@ -186,12 +187,36 @@ body::after{
   opacity:0.45;pointer-events:none;mix-blend-mode:screen;
 }
 
-/* GitHub button in the top-right corner */
-.github-btn{
+/* Top-right controls */
+.top-actions{
   position:absolute;
   top:18px;
   right:28px;
-  z-index:1100;
+  z-index:1200;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.menu-btn{
+  width:48px;
+  height:48px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,232,31,0.12);
+  color: var(--accent);
+  border:1px solid rgba(255,232,31,0.22);
+  border-radius:14px;
+  font-size:22px;
+  cursor:pointer;
+  box-shadow:0 14px 32px rgba(0,0,0,0.35);
+  transition:transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.menu-btn:hover{background:rgba(255,232,31,0.18);transform:translateY(-1px)}
+.menu-btn:focus-visible{outline:2px solid rgba(255,232,31,0.45);outline-offset:3px}
+
+.github-btn{
   display:inline-flex;
   align-items:center;
   gap:8px;
@@ -208,8 +233,117 @@ body::after{
 .github-btn .github-text{color:var(--muted);white-space:nowrap}
 .github-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,0.7);border-color:rgba(255,255,255,0.06)}
 
+.menu-panel{
+  position:absolute;
+  top:70px;
+  right:28px;
+  width:220px;
+  background:rgba(10,14,22,0.96);
+  border:1.5px solid rgba(255,232,31,0.4);
+  border-radius:16px;
+  box-shadow:0 18px 40px rgba(0,0,0,0.35);
+  padding:10px;
+  backdrop-filter:blur(14px);
+  z-index:1150;
+}
+
+.menu-item{
+  width:100%;
+  text-align:left;
+  border:none;
+  background:transparent;
+  color:#e6eef8;
+  padding:12px 14px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:700;
+}
+.menu-item:hover{background:rgba(255,255,255,0.06)}
+
+.manual-pairings-panel{
+  position:fixed;
+  inset:0;
+  z-index:1300;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,0.75);
+  padding:20px;
+}
+.manual-pairings-panel:not([hidden]){
+  display:flex;
+}
+.manual-pairings-panel__inner{
+  width:min(940px,calc(100vw - 40px));
+  max-height:calc(100vh - 56px);
+  overflow:auto;
+  background:rgba(10,14,22,0.98);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:22px;
+  padding:24px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.55);
+}
+.manual-pairings-input{
+  width:100%;
+  min-height:240px;
+  resize:vertical;
+  padding:10px 12px;
+  background:var(--glass);
+  border:1px solid rgba(255,255,255,0.04);
+  color:var(--muted);
+  border-radius:10px;
+  outline:none;
+  font-size:15px;
+  margin-bottom:16px;
+}
+.manual-pairings-input:focus{box-shadow:0 0 0 4px rgba(255,232,31,0.06);border-color:rgba(255,232,31,0.25);color:#fff}
+
+.popup-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:16px;
+}
+.popup-title{
+  margin:0;
+  color:#fff;
+  font-size:18px;
+}
+.close-btn{
+  border:none;
+  background:rgba(255,255,255,0.04);
+  color:var(--muted);
+  font-size:24px;
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  cursor:pointer;
+}
+.close-btn:hover{background:rgba(255,255,255,0.08);color:var(--accent)}
+
+@media (max-width:680px){
+  body{padding:18px 12px;}
+  .container{padding:20px;}
+  .site-title{font-size:28px;margin-bottom:16px;}
+  .top-actions{position:static;display:flex;justify-content:center;gap:12px;margin-bottom:20px;}
+  .menu-btn{width:40px;height:40px;font-size:20px;}
+  .github-btn{padding:6px 8px;font-size:12px;}
+  .github-btn .github-text{display:none;}
+  .controls{flex-direction:column;align-items:stretch;gap:12px;}
+  .controls .input-label{margin-bottom:6px;}
+  .rounds-select,.player-filter-select,.group-select,.players-input{width:100%;}
+  .generate-btn,.reset-btn,.export-btn{width:100%;justify-content:center;}
+  .filter-row{flex-direction:column;align-items:stretch;gap:12px;}
+  .menu-panel{position:fixed;left:50%;transform:translateX(-50%);top:10%;right:auto;width:calc(100vw - 24px);}\n
+  .manual-pairings-panel__inner{width:min(100%,calc(100vw - 24px));max-height:80vh;padding:18px;}
+  .manual-pairings-input{min-height:160px;}
+  .popup-header{flex-direction:column;align-items:flex-start;gap:12px;}
+  .close-btn{align-self:flex-end;}
+  .match-item{font-size:0.7rem;padding:10px 8px;}
+}
+
 @media (max-width:480px){
-  .github-btn{padding:6px 8px;font-size:12px;top:12px;right:12px}
+  .github-btn{padding:6px 8px;font-size:12px}
   .github-btn .github-text{display:none}
 }
 
