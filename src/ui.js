@@ -280,7 +280,7 @@ const buildMatchItem = (match, matchId) => {
   const label = document.createElement('label');
   label.className = 'match-played-label';
   label.setAttribute('for', checkbox.id);
-  label.textContent = 'Played';
+  label.textContent = '';
 
   li.appendChild(checkbox);
   li.appendChild(label);
