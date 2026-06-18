@@ -28,8 +28,8 @@
 
         <div class="form-group">
           <label for="special-word" class="form-label">Approval Word</label>
-          <input id="special-word" type="password" class="form-input" required placeholder="Provided by merryface" />
-          <span class="password-hint">Secret code from admin approval</span>
+          <input id="special-word" type="password" class="form-input" placeholder="Provided by merryface" />
+          <span class="password-hint">Secret code from admin approval (optional)</span>
         </div>
 
         <button type="submit" class="submit-btn auth-submit">Register</button>
@@ -72,8 +72,8 @@
             const password = document.getElementById('password').value;
             const specialWord = document.getElementById('special-word').value;
             
-            if (!username || !password || !specialWord) {
-              throw new Error('Username, password, and approval word are required');
+            if (!username || !password) {
+              throw new Error('Username and password are required');
             }
 
             if (password.length < 8) {
