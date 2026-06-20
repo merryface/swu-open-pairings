@@ -266,15 +266,23 @@
       try {
         const url = window.SWU?.Auth?.apiUrl(`/api/pairings/${this.currentPairingId}`) || `http://127.0.0.1:3000/api/pairings/${this.currentPairingId}`;
         
+        console.log('[PairingsDisplay] Sending update to:', url);
+        console.log('[PairingsDisplay] Data:', cleanData);
+
         const response = await window.SWU.Auth.authFetch(url, {
           method: 'PUT',
           body: JSON.stringify(cleanData),
         });
 
-        const result = await response.json();
+        console.log('[PairingsDisplay] Response status:', response.status);
+
+        let result = null;
+        if (response.status !== 204) {
+          result = await response.json();
+        }
         
         if (!response.ok) {
-          throw new Error(result.message || 'Update failed');
+          throw new Error(result?.message || 'Update failed');
         }
 
         console.log('[PairingsDisplay] Update successful');
