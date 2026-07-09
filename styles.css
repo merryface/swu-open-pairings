@@ -517,9 +517,18 @@ body::after{
   accent-color: var(--accent);
 }
 
-.inactive-player-item label {
+.inactive-player-name {
+  background: none;
+  border: 0;
+  color: inherit;
   cursor: pointer;
   flex: 1;
   font-size: 16px;
+  padding: 0;
+  text-align: left;
   user-select: none;
+}
+
+.inactive-player-name:hover {
+  color: var(--accent);
 }

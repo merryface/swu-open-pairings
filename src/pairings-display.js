@@ -183,6 +183,23 @@
       }
     },
 
+    async copyTextToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    },
+
     async showInactivePlayersModal() {
       const modal = document.getElementById('inactive-modal');
       const listContainer = document.getElementById('inactive-players-list');
@@ -228,12 +245,18 @@
           this.setInactivePlayerState(player, e.target.checked);
         });
 
-        const label = document.createElement('label');
-        label.setAttribute('for', `inactive-${player}`);
-        label.textContent = player;
+        const nameButton = document.createElement('button');
+        nameButton.type = 'button';
+        nameButton.className = 'inactive-player-name';
+        nameButton.textContent = player;
+        nameButton.addEventListener('click', () => {
+          this.copyTextToClipboard(player).catch(error => {
+            console.error('[PairingsDisplay] Failed to copy player name:', error);
+          });
+        });
 
         item.appendChild(checkbox);
-        item.appendChild(label);
+        item.appendChild(nameButton);
         listContainer.appendChild(item);
       });
     },
