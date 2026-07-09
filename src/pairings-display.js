@@ -9,7 +9,6 @@
     currentPairingData: null,
     currentPlayerFilter: 'all',
     changedMatches: new Set(),
-    showOnlyInactivePlayers: false,
 
     async init() {
       console.log('[PairingsDisplay] Initializing');
@@ -29,7 +28,7 @@
       this.currentPairingId = pairingId;
       await this.loadPairing(pairingId);
       this.setupAdminButtons();
-      this.setupInactiveFilterButton();
+      this.setupInactivePlayersButton();
       // Ensure visibility is set correctly for admin actions
       this.updateAdminActionsVisibility();
     },
@@ -37,7 +36,7 @@
     updateAdminActionsVisibility() {
       const adminActions = document.getElementById('admin-actions');
       const adminActionsBottom = document.getElementById('admin-actions-bottom');
-      const toggleInactiveBtn = document.getElementById('toggle-inactive-btn');
+      const showInactiveBtn = document.getElementById('show-inactive-btn');
       const isAuth = window.SWU?.Auth?.isAuthenticated?.();
       
       if (adminActions) {
@@ -46,8 +45,8 @@
       if (adminActionsBottom) {
         adminActionsBottom.style.display = isAuth ? 'flex' : 'none';
       }
-      if (toggleInactiveBtn) {
-        toggleInactiveBtn.style.display = isAuth ? 'inline-block' : 'none';
+      if (showInactiveBtn) {
+        showInactiveBtn.style.display = isAuth ? 'inline-block' : 'none';
       }
     },
 
@@ -83,47 +82,160 @@
       }
     },
 
-    setupInactiveFilterButton() {
-      const toggleBtn = document.getElementById('toggle-inactive-btn');
-      const btnText = document.getElementById('filter-btn-text');
+    setupInactivePlayersButton() {
+      const showBtn = document.getElementById('show-inactive-btn');
+      const modal = document.getElementById('inactive-modal');
+      const closeBtn = document.getElementById('close-modal');
 
-      if (toggleBtn) {
-        toggleBtn.addEventListener('click', () => {
-          this.showOnlyInactivePlayers = !this.showOnlyInactivePlayers;
-          
-          // Update button text
-          if (btnText) {
-            btnText.textContent = this.showOnlyInactivePlayers ? 'Show All Players' : 'Show Only Inactive Players';
-          }
-          
-          // Re-render pairings with new filter
-          if (this.currentPairingData) {
-            this.displayPairings(this.currentPairingData);
+      if (showBtn) {
+        showBtn.addEventListener('click', async () => {
+          await this.showInactivePlayersModal();
+        });
+      }
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          modal.style.display = 'none';
+        });
+      }
+
+      // Close modal when clicking outside
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.style.display = 'none';
           }
         });
       }
     },
 
-    getActivePlayers(pairing) {
-      // Returns a Set of player names who have played at least one match
-      const activePlayers = new Set();
+    async getAllPlayers() {
+      // Fetch all pairings to build master player list
+      try {
+        const url = window.SWU?.Auth?.apiUrl('/api/pairings') || 'http://127.0.0.1:3000/api/pairings';
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch pairings: ${response.status}`);
+        }
+
+        const pairings = await response.json();
+        const allPlayers = new Set();
+        const playersWithPlayedMatches = new Set();
+
+        pairings.forEach(pairing => {
+          if (!pairing.rounds) return;
+          
+          pairing.rounds.forEach(round => {
+            round.matches?.forEach(match => {
+              const home = (match.home || '').replace(/:\s*$/, '').trim();
+              const away = (match.away || '').replace(/:\s*$/, '').trim();
+              
+              // Add all players to the master list
+              if (home && home !== 'BYE') allPlayers.add(home);
+              if (away && away !== 'BYE') allPlayers.add(away);
+              
+              // Track players who have played at least one match
+              if (match.played === true) {
+                if (home && home !== 'BYE') playersWithPlayedMatches.add(home);
+                if (away && away !== 'BYE') playersWithPlayedMatches.add(away);
+              }
+            });
+          });
+        });
+
+        return { allPlayers, playersWithPlayedMatches };
+      } catch (error) {
+        console.error('[PairingsDisplay] Error fetching all players:', error);
+        return { allPlayers: new Set(), playersWithPlayedMatches: new Set() };
+      }
+    },
+
+    getCurrentPlayers(pairing) {
+      const currentPlayers = new Set();
       
-      if (!pairing?.rounds) return activePlayers;
+      if (!pairing?.rounds) return currentPlayers;
       
       pairing.rounds.forEach(round => {
         round.matches?.forEach(match => {
-          // Only count as active if the match was actually played
-          if (match.played) {
-            const home = (match.home || '').replace(/:\s*$/, '').trim();
-            const away = (match.away || '').replace(/:\s*$/, '').trim();
-            
-            if (home && home !== 'BYE') activePlayers.add(home);
-            if (away && away !== 'BYE') activePlayers.add(away);
-          }
+          const home = (match.home || '').replace(/:\s*$/, '').trim();
+          const away = (match.away || '').replace(/:\s*$/, '').trim();
+          
+          if (home && home !== 'BYE') currentPlayers.add(home);
+          if (away && away !== 'BYE') currentPlayers.add(away);
         });
       });
       
-      return activePlayers;
+      return currentPlayers;
+    },
+
+    getInactivePlayerState(playerName) {
+      const key = `inactive_player_${playerName}`;
+      return localStorage.getItem(key) === 'true';
+    },
+
+    setInactivePlayerState(playerName, checked) {
+      const key = `inactive_player_${playerName}`;
+      if (checked) {
+        localStorage.setItem(key, 'true');
+      } else {
+        localStorage.removeItem(key);
+      }
+    },
+
+    async showInactivePlayersModal() {
+      const modal = document.getElementById('inactive-modal');
+      const listContainer = document.getElementById('inactive-players-list');
+      const noInactiveMsg = document.getElementById('no-inactive');
+      
+      if (!modal || !listContainer) return;
+
+      // Show modal
+      modal.style.display = 'block';
+      
+      // Get all players and players who have played matches
+      const { allPlayers, playersWithPlayedMatches } = await this.getAllPlayers();
+      
+      // Inactive players = all players who have NEVER played a match (checkbox never ticked)
+      const inactivePlayers = Array.from(allPlayers)
+        .filter(player => !playersWithPlayedMatches.has(player))
+        .sort();
+
+      // Clear list
+      listContainer.innerHTML = '';
+      
+      if (inactivePlayers.length === 0) {
+        listContainer.style.display = 'none';
+        noInactiveMsg.style.display = 'block';
+        noInactiveMsg.textContent = 'All players have played at least one match!';
+        return;
+      }
+
+      listContainer.style.display = 'block';
+      noInactiveMsg.style.display = 'none';
+
+      // Render inactive players with checkboxes
+      inactivePlayers.forEach(player => {
+        const item = document.createElement('div');
+        item.className = 'inactive-player-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `inactive-${player}`;
+        checkbox.checked = this.getInactivePlayerState(player);
+
+        checkbox.addEventListener('change', (e) => {
+          this.setInactivePlayerState(player, e.target.checked);
+        });
+
+        const label = document.createElement('label');
+        label.setAttribute('for', `inactive-${player}`);
+        label.textContent = player;
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        listContainer.appendChild(item);
+      });
     },
 
     async loadPairing(pairingId) {
@@ -191,27 +303,8 @@
       const filterFn = window.SWU?.UI?.filterPairings;
       console.log('[PairingsDisplay] filterPairings available?', !!filterFn);
       
-      let filteredPairings = filterFn ? filterFn(pairingsForUI, this.currentPlayerFilter) : pairingsForUI;
+      const filteredPairings = filterFn ? filterFn(pairingsForUI, this.currentPlayerFilter) : pairingsForUI;
       console.log('[PairingsDisplay] Filtered pairings:', filteredPairings);
-      
-      // Apply inactive player filter if enabled
-      if (this.showOnlyInactivePlayers) {
-        const activePlayers = this.getActivePlayers(pairing);
-        
-        filteredPairings = filteredPairings.map(round => ({
-          ...round,
-          matches: round.matches.filter(match => {
-            const player1 = (match.player1 || '').trim();
-            const player2 = (match.player2 || '').trim();
-            
-            // Keep the match if at least one player is INACTIVE (not in active set)
-            const player1Inactive = player1 && !activePlayers.has(player1) && player1 !== 'BYE';
-            const player2Inactive = player2 && !activePlayers.has(player2) && player2 !== 'BYE';
-            
-            return player1Inactive || player2Inactive;
-          })
-        })).filter(round => round.matches.length > 0); // Remove empty rounds
-      }
       
       const displayRounds = this.convertFromUIFormat(filteredPairings, pairing);
       console.log('[PairingsDisplay] Converted back from UI format:', displayRounds);

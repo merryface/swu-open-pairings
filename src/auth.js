@@ -2,18 +2,8 @@
 const AUTH_TOKEN_KEY = 'authToken';
 const AUTH_USERNAME_KEY = 'username';
 
-// API configuration - detect environment automatically
-let API_BASE_URL = (() => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    // Use local backend for development
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://127.0.0.1:3000';
-    }
-  }
-  // Use production backend for deployed versions (GitHub Pages, etc.)
-  return 'https://0724b072-9a0d-4844-9d1c-4607d10e5ade-00-3qf76ra4gxhdb.spock.replit.dev';
-})();
+// API configuration - always use production backend
+let API_BASE_URL = 'https://0724b072-9a0d-4844-9d1c-4607d10e5ade-00-3qf76ra4gxhdb.spock.replit.dev';
 
 // Initialize from window if available (allows override)
 if (typeof window !== 'undefined' && window.SWU?.API_BASE_URL) {
