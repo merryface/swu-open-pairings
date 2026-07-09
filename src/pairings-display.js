@@ -9,7 +9,7 @@
     currentPairingData: null,
     currentPlayerFilter: 'all',
     changedMatches: new Set(),
-    hideInactivePlayers: false,
+    showOnlyInactivePlayers: false,
 
     async init() {
       console.log('[PairingsDisplay] Initializing');
@@ -37,7 +37,7 @@
     updateAdminActionsVisibility() {
       const adminActions = document.getElementById('admin-actions');
       const adminActionsBottom = document.getElementById('admin-actions-bottom');
-      const inactivePlayerFilter = document.getElementById('inactive-player-filter');
+      const toggleInactiveBtn = document.getElementById('toggle-inactive-btn');
       const isAuth = window.SWU?.Auth?.isAuthenticated?.();
       
       if (adminActions) {
@@ -46,8 +46,8 @@
       if (adminActionsBottom) {
         adminActionsBottom.style.display = isAuth ? 'flex' : 'none';
       }
-      if (inactivePlayerFilter) {
-        inactivePlayerFilter.style.display = isAuth ? 'block' : 'none';
+      if (toggleInactiveBtn) {
+        toggleInactiveBtn.style.display = isAuth ? 'inline-block' : 'none';
       }
     },
 
@@ -89,11 +89,11 @@
 
       if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
-          this.hideInactivePlayers = !this.hideInactivePlayers;
+          this.showOnlyInactivePlayers = !this.showOnlyInactivePlayers;
           
           // Update button text
           if (btnText) {
-            btnText.textContent = this.hideInactivePlayers ? 'Show All Players' : 'Hide Inactive Players';
+            btnText.textContent = this.showOnlyInactivePlayers ? 'Show All Players' : 'Show Only Inactive Players';
           }
           
           // Re-render pairings with new filter
@@ -195,9 +195,8 @@
       console.log('[PairingsDisplay] Filtered pairings:', filteredPairings);
       
       // Apply inactive player filter if enabled
-      if (this.hideInactivePlayers) {
+      if (this.showOnlyInactivePlayers) {
         const activePlayers = this.getActivePlayers(pairing);
-        console.log('[PairingsDisplay] Active players:', activePlayers);
         
         filteredPairings = filteredPairings.map(round => ({
           ...round,
@@ -205,8 +204,11 @@
             const player1 = (match.player1 || '').trim();
             const player2 = (match.player2 || '').trim();
             
-            // Keep the match if either player is active
-            return activePlayers.has(player1) || activePlayers.has(player2);
+            // Keep the match if at least one player is INACTIVE (not in active set)
+            const player1Inactive = player1 && !activePlayers.has(player1) && player1 !== 'BYE';
+            const player2Inactive = player2 && !activePlayers.has(player2) && player2 !== 'BYE';
+            
+            return player1Inactive || player2Inactive;
           })
         })).filter(round => round.matches.length > 0); // Remove empty rounds
       }

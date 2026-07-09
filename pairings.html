@@ -22,17 +22,16 @@
     <!-- Back to home -->
     <button onclick="window.location.href='index.html'" class="reset-btn" style="margin-bottom: 20px;">← Back to Home</button>
 
-    <div class="filter-row">
-      <label class="input-label" for="player-filter">Filter pairings</label>
-      <select id="player-filter" class="player-filter-select" disabled>
-        <option value="all">All players</option>
-      </select>
-    </div>
-
-    <!-- Filter button for logged in users -->
-    <div id="inactive-player-filter" style="display: none; margin-bottom: 20px;">
-      <button id="toggle-inactive-btn" class="reset-btn" style="font-size: 14px;">
-        <span id="filter-btn-text">Hide Inactive Players</span>
+    <div class="filter-row" style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+      <div style="flex: 1;">
+        <label class="input-label" for="player-filter">Filter pairings</label>
+        <select id="player-filter" class="player-filter-select" disabled>
+          <option value="all">All players</option>
+        </select>
+      </div>
+      <!-- Filter button for logged in users -->
+      <button id="toggle-inactive-btn" class="reset-btn" style="display: none; font-size: 14px; white-space: nowrap;">
+        <span id="filter-btn-text">Show Only Inactive Players</span>
       </button>
     </div>
 
