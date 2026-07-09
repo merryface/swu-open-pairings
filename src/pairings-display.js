@@ -9,6 +9,7 @@
     currentPairingData: null,
     currentPlayerFilter: 'all',
     changedMatches: new Set(),
+    hideInactivePlayers: false,
 
     async init() {
       console.log('[PairingsDisplay] Initializing');
@@ -28,6 +29,7 @@
       this.currentPairingId = pairingId;
       await this.loadPairing(pairingId);
       this.setupAdminButtons();
+      this.setupInactiveFilterButton();
       // Ensure visibility is set correctly for admin actions
       this.updateAdminActionsVisibility();
     },
@@ -35,6 +37,7 @@
     updateAdminActionsVisibility() {
       const adminActions = document.getElementById('admin-actions');
       const adminActionsBottom = document.getElementById('admin-actions-bottom');
+      const inactivePlayerFilter = document.getElementById('inactive-player-filter');
       const isAuth = window.SWU?.Auth?.isAuthenticated?.();
       
       if (adminActions) {
@@ -42,6 +45,9 @@
       }
       if (adminActionsBottom) {
         adminActionsBottom.style.display = isAuth ? 'flex' : 'none';
+      }
+      if (inactivePlayerFilter) {
+        inactivePlayerFilter.style.display = isAuth ? 'block' : 'none';
       }
     },
 
@@ -75,6 +81,49 @@
         deleteBtnBottom.replaceWith(newDeleteBtnBottom);
         newDeleteBtnBottom.addEventListener('click', () => this.handleDelete());
       }
+    },
+
+    setupInactiveFilterButton() {
+      const toggleBtn = document.getElementById('toggle-inactive-btn');
+      const btnText = document.getElementById('filter-btn-text');
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          this.hideInactivePlayers = !this.hideInactivePlayers;
+          
+          // Update button text
+          if (btnText) {
+            btnText.textContent = this.hideInactivePlayers ? 'Show All Players' : 'Hide Inactive Players';
+          }
+          
+          // Re-render pairings with new filter
+          if (this.currentPairingData) {
+            this.displayPairings(this.currentPairingData);
+          }
+        });
+      }
+    },
+
+    getActivePlayers(pairing) {
+      // Returns a Set of player names who have played at least one match
+      const activePlayers = new Set();
+      
+      if (!pairing?.rounds) return activePlayers;
+      
+      pairing.rounds.forEach(round => {
+        round.matches?.forEach(match => {
+          // Only count as active if the match was actually played
+          if (match.played) {
+            const home = (match.home || '').replace(/:\s*$/, '').trim();
+            const away = (match.away || '').replace(/:\s*$/, '').trim();
+            
+            if (home && home !== 'BYE') activePlayers.add(home);
+            if (away && away !== 'BYE') activePlayers.add(away);
+          }
+        });
+      });
+      
+      return activePlayers;
     },
 
     async loadPairing(pairingId) {
@@ -142,8 +191,25 @@
       const filterFn = window.SWU?.UI?.filterPairings;
       console.log('[PairingsDisplay] filterPairings available?', !!filterFn);
       
-      const filteredPairings = filterFn ? filterFn(pairingsForUI, this.currentPlayerFilter) : pairingsForUI;
+      let filteredPairings = filterFn ? filterFn(pairingsForUI, this.currentPlayerFilter) : pairingsForUI;
       console.log('[PairingsDisplay] Filtered pairings:', filteredPairings);
+      
+      // Apply inactive player filter if enabled
+      if (this.hideInactivePlayers) {
+        const activePlayers = this.getActivePlayers(pairing);
+        console.log('[PairingsDisplay] Active players:', activePlayers);
+        
+        filteredPairings = filteredPairings.map(round => ({
+          ...round,
+          matches: round.matches.filter(match => {
+            const player1 = (match.player1 || '').trim();
+            const player2 = (match.player2 || '').trim();
+            
+            // Keep the match if either player is active
+            return activePlayers.has(player1) || activePlayers.has(player2);
+          })
+        })).filter(round => round.matches.length > 0); // Remove empty rounds
+      }
       
       const displayRounds = this.convertFromUIFormat(filteredPairings, pairing);
       console.log('[PairingsDisplay] Converted back from UI format:', displayRounds);
